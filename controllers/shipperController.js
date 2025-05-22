@@ -176,3 +176,45 @@ exports.updateShipperProfile = async (req, res) => {
     res.status(500).json({ msg: "Profile update failed" });
   }
 };
+exports.forgotPassword = async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ msg: "Phone number is required" });
+
+  try {
+    const [user] = await db.query("SELECT id FROM shippers WHERE phone = ?", [
+      phone,
+    ]);
+    if (!user.length) return res.status(404).json({ msg: "Phone not found" });
+
+    await generateAndSendOTP(phone);
+    res.status(200).json({ msg: "OTP sent to phone" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to send OTP" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  const { phone, otp, password, confirm_password } = req.body;
+
+  if (!phone || !otp || !password || !confirm_password)
+    return res.status(400).json({ msg: "All fields are required" });
+  if (password !== confirm_password)
+    return res.status(400).json({ msg: "Passwords do not match" });
+
+  try {
+    const valid = await verifyOTP(phone, otp);
+    if (!valid) return res.status(400).json({ msg: "Invalid or expired OTP" });
+
+    const hash = await bcrypt.hash(password, 10);
+    await db.query("UPDATE shippers SET password = ? WHERE phone = ?", [
+      hash,
+      phone,
+    ]);
+
+    res.status(200).json({ msg: "Password reset successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to reset password" });
+  }
+};

@@ -20,6 +20,7 @@ router.post(
   upload.fields([
     { name: "license_file", maxCount: 1 },
     { name: "insurance_file", maxCount: 1 },
+    { name: "registration_file", maxCount: 1 },
   ]),
   controller.registerDriver
 );
@@ -29,4 +30,6 @@ router.post("/login", controller.loginDriver);
 router.post("/logout", controller.logoutDriver);
 router.get("/profile", controller.getDriverProfile);
 router.put("/profile", controller.updateDriverProfile);
+router.post("/forgot-password", controller.forgotPassword);
+router.post("/reset-password", controller.resetPassword);
 module.exports = router;

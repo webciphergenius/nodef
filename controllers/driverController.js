@@ -27,8 +27,8 @@ exports.registerDriver = async (req, res) => {
 
   const license_file = req.files?.license_file?.[0]?.filename;
   const insurance_file = req.files?.insurance_file?.[0]?.filename;
-
-  if (!license_file || !insurance_file)
+  const registration_file = req.files?.registration_file?.[0]?.filename;
+  if (!license_file || !insurance_file || !registration_file)
     return res
       .status(400)
       .json({ msg: "License and insurance files are required" });
@@ -48,8 +48,8 @@ exports.registerDriver = async (req, res) => {
       `INSERT INTO drivers
       (first_name, last_name, vehicle_type, vehicle_number, load_capacity,
        phone, email, zipcode, country, address, username, password,
-       license_file, insurance_file)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       license_file, insurance_file, registration_file)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         first_name,
         last_name,
@@ -65,6 +65,7 @@ exports.registerDriver = async (req, res) => {
         hash,
         license_file,
         insurance_file,
+        registration_file,
       ]
     );
 
@@ -182,5 +183,47 @@ exports.updateDriverProfile = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Profile update failed" });
+  }
+};
+exports.forgotPassword = async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ msg: "Phone number is required" });
+
+  try {
+    const [user] = await db.query("SELECT id FROM drivers WHERE phone = ?", [
+      phone,
+    ]);
+    if (!user.length) return res.status(404).json({ msg: "Phone not found" });
+
+    await generateAndSendOTP(phone);
+    res.status(200).json({ msg: "OTP sent to phone" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to send OTP" });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  const { phone, otp, password, confirm_password } = req.body;
+
+  if (!phone || !otp || !password || !confirm_password)
+    return res.status(400).json({ msg: "All fields are required" });
+  if (password !== confirm_password)
+    return res.status(400).json({ msg: "Passwords do not match" });
+
+  try {
+    const valid = await verifyOTP(phone, otp);
+    if (!valid) return res.status(400).json({ msg: "Invalid or expired OTP" });
+
+    const hash = await bcrypt.hash(password, 10);
+    await db.query("UPDATE drivers SET password = ? WHERE phone = ?", [
+      hash,
+      phone,
+    ]);
+
+    res.status(200).json({ msg: "Password reset successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to reset password" });
   }
 };
