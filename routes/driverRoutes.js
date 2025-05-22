@@ -32,4 +32,5 @@ router.get("/profile", controller.getDriverProfile);
 router.put("/profile", controller.updateDriverProfile);
 router.post("/forgot-password", controller.forgotPassword);
 router.post("/reset-password", controller.resetPassword);
+router.post("/resend-otp", controller.resendOtp);
 module.exports = router;

@@ -17,3 +17,21 @@ exports.verifyOTP = async (phone, code) => {
   );
   return rows.length > 0;
 };
+exports.handleOtpResend = async (phone) => {
+  const [recent] = await db.query(
+    "SELECT * FROM otp_codes WHERE phone = ? ORDER BY created_at DESC LIMIT 1",
+    [phone]
+  );
+
+  if (recent.length > 0) {
+    const lastSent = new Date(recent[0].created_at);
+    const now = new Date();
+    const diff = (now - lastSent) / 1000;
+    if (diff < 60) {
+      return { tooSoon: true };
+    }
+  }
+
+  await exports.generateAndSendOTP(phone);
+  return { tooSoon: false };
+};

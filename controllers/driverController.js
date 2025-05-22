@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { handleOtpResend } = require("../services/otpService");
 const { generateAndSendOTP, verifyOTP } = require("../services/otpService");
 const {
   loginUser,
@@ -225,5 +226,22 @@ exports.resetPassword = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to reset password" });
+  }
+};
+exports.resendOtp = async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ msg: "Phone number is required" });
+
+  try {
+    const result = await handleOtpResend(phone);
+    if (result.tooSoon)
+      return res
+        .status(429)
+        .json({ msg: "Please wait before requesting another OTP" });
+
+    res.status(200).json({ msg: "OTP resent successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Error resending OTP" });
   }
 };

@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { handleOtpResend } = require("../services/otpService");
 const { generateAndSendOTP, verifyOTP } = require("../services/otpService");
 const {
   loginUser,
@@ -80,23 +81,12 @@ exports.resendOtp = async (req, res) => {
   if (!phone) return res.status(400).json({ msg: "Phone number is required" });
 
   try {
-    const [recent] = await db.query(
-      "SELECT * FROM otp_codes WHERE phone = ? ORDER BY created_at DESC LIMIT 1",
-      [phone]
-    );
+    const result = await handleOtpResend(phone);
+    if (result.tooSoon)
+      return res
+        .status(429)
+        .json({ msg: "Please wait before requesting another OTP" });
 
-    if (recent.length > 0) {
-      const lastSent = new Date(recent[0].created_at);
-      const now = new Date();
-      const diff = (now - lastSent) / 1000; // in seconds
-
-      if (diff < 60)
-        return res
-          .status(429)
-          .json({ msg: "Please wait before requesting another OTP" });
-    }
-
-    await generateAndSendOTP(phone);
     res.status(200).json({ msg: "OTP resent successfully" });
   } catch (err) {
     console.error(err);
