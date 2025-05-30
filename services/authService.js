@@ -18,6 +18,8 @@ exports.loginUser = async (table, phone, password) => {
     { expiresIn: "1d" }
   );
 
+  delete user.password; // 🔐 Remove password before returning
+
   return { token, user };
 };
 

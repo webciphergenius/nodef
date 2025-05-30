@@ -6,4 +6,5 @@ const path = require("path");
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api", unifiedRoutes);
+
 module.exports = app;

@@ -135,7 +135,11 @@ exports.loginUser = async (req, res) => {
   try {
     const result = await loginUser("users", phone, password);
     if (!result) return res.status(401).json({ msg: "Login failed" });
-    res.status(200).json({ msg: "Login successful", token: result.token });
+    res.status(200).json({
+      msg: "Login successful",
+      token: result.token,
+      user: result.user,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Login error" });
