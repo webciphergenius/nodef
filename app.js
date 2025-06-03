@@ -1,10 +1,21 @@
 const express = require("express");
 const app = express();
-const unifiedRoutes = require("./routes/userRoutes");
 const path = require("path");
+const chatRoutes = require("./routes/chatRoutes");
+const bodyParser = require("body-parser");
+const unifiedRoutes = require("./routes/userRoutes");
+const shipmentRoutes = require("./routes/shipmentRoutes");
+const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 
+// ✅ Stripe webhook must be BEFORE express.json()
+app.use("/api/webhook", express.raw({ type: "application/json" }));
+app.use("/api/webhook", stripeWebhookRoutes); // Mount after raw
+
+// ✅ All other JSON routes after this
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/chat", chatRoutes);
 app.use("/api", unifiedRoutes);
+app.use("/api/shipment", shipmentRoutes);
 
 module.exports = app;

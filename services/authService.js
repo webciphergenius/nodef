@@ -28,3 +28,21 @@ exports.tokenBlacklist = new Set();
 exports.logout = (token) => {
   exports.tokenBlacklist.add(token);
 };
+exports.authenticateUser = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer "))
+    return res.status(401).json({ msg: "Unauthorized" });
+
+  const token = authHeader.split(" ")[1];
+  if (exports.tokenBlacklist.has(token)) {
+    return res.status(401).json({ msg: "Token has been invalidated" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Save user info to req
+    next();
+  } catch (err) {
+    return res.status(401).json({ msg: "Invalid or expired token" });
+  }
+};
