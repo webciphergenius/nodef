@@ -1,3 +1,4 @@
+const db = require("../config/db");
 exports.getChatHistory = async (req, res) => {
   const { userId, otherUserId, shipmentId } = req.query;
 
