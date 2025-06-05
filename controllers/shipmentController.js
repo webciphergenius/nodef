@@ -136,7 +136,7 @@ exports.getCompletedShipments = async (req, res) => {
 exports.listAvailableShipments = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT id, vehicle_type, pickup_zip, dropoff_zip, service_level, declared_value, shipment_images, created_at FROM shipments WHERE payment_status = 'paid' AND driver_id IS NULL"
+      "SELECT id, vehicle_type, pickup_zip, dropoff_zip, service_level, declared_value, shipment_images, created_at,shipper_id,driver_id FROM shipments WHERE payment_status = 'paid' AND driver_id IS NULL"
     );
 
     const formatted = rows.map((row) => ({
