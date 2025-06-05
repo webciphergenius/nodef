@@ -185,3 +185,23 @@ exports.acceptShipment = async (req, res) => {
     res.status(500).json({ msg: "Failed to accept shipment" });
   }
 };
+exports.listAcceptedShipments = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+    const [rows] = await db.query(
+      "SELECT * FROM shipments WHERE driver_id = ? AND is_completed = 0",
+      [driverId]
+    );
+
+    const formatted = rows.map((row) => ({
+      shipment_images: Array.isArray(row.shipment_images)
+        ? row.shipment_images
+        : JSON.parse(row.shipment_images || "[]"),
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to fetch accepted shipments" });
+  }
+};

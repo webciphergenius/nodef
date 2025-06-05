@@ -20,5 +20,5 @@ router.get("/available", authenticateUser, controller.listAvailableShipments);
 router.get("/active", authenticateUser, controller.getActiveShipments);
 router.get("/completed", authenticateUser, controller.getCompletedShipments);
 router.post("/accept/:shipmentId", authenticateUser, controller.acceptShipment);
-
+router.get("/accepted", authenticateUser, controller.listAcceptedShipments);
 module.exports = router;
