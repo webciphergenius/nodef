@@ -194,6 +194,7 @@ exports.listAcceptedShipments = async (req, res) => {
     );
 
     const formatted = rows.map((row) => ({
+      ...row,
       shipment_images: Array.isArray(row.shipment_images)
         ? row.shipment_images
         : JSON.parse(row.shipment_images || "[]"),
