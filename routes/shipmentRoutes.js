@@ -21,4 +21,15 @@ router.get("/active", authenticateUser, controller.getActiveShipments);
 router.get("/completed", authenticateUser, controller.getCompletedShipments);
 router.post("/accept/:shipmentId", authenticateUser, controller.acceptShipment);
 router.get("/accepted", authenticateUser, controller.listAcceptedShipments);
+router.post(
+  "/:shipmentId/location",
+  authenticateUser,
+  controller.updateLocation
+);
+router.get(
+  "/:shipmentId/location",
+  authenticateUser,
+  controller.getLatestLocation
+);
+
 module.exports = router;

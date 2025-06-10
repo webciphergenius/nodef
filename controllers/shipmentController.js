@@ -206,3 +206,38 @@ exports.listAcceptedShipments = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch accepted shipments" });
   }
 };
+//track shipment
+exports.updateLocation = async (req, res) => {
+  const { latitude, longitude } = req.body;
+  const driverId = req.user.id;
+  const shipmentId = req.params.shipmentId;
+
+  try {
+    await db.query(
+      `INSERT INTO locations (shipment_id, driver_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
+      [shipmentId, driverId, latitude, longitude]
+    );
+    res.status(200).json({ msg: "Location updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to update location" });
+  }
+};
+exports.getLatestLocation = async (req, res) => {
+  const shipmentId = req.params.shipmentId;
+  try {
+    const [rows] = await db.query(
+      `SELECT latitude, longitude, timestamp FROM locations WHERE shipment_id = ? ORDER BY timestamp DESC LIMIT 1`,
+      [shipmentId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ msg: "No location found" });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to fetch location" });
+  }
+};
