@@ -31,5 +31,5 @@ router.get(
   authenticateUser,
   controller.getLatestLocation
 );
-
+router.get('/counts', authenticateUser,controller.getShipmentCounts);
 module.exports = router;

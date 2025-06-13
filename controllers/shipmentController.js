@@ -241,3 +241,30 @@ exports.getLatestLocation = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch location" });
   }
 };
+exports.getShipmentCounts = async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer "))
+      return res.status(401).json({ msg: "Unauthorized" });
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const shipperId = decoded.id;
+
+    const [rows] = await db.query(
+      `SELECT 
+         COUNT(*) AS total_shipments,
+         SUM(CASE WHEN driver_id IS NOT NULL AND is_completed = 0 THEN 1 ELSE 0 END) AS in_transit,
+         SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) AS completed,
+         SUM(CASE WHEN driver_id IS NULL THEN 1 ELSE 0 END) AS pending
+       FROM shipments
+       WHERE shipper_id = ? AND payment_status = 'paid'`,
+      [shipperId]
+    );
+
+    res.status(200).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to fetch shipment counts" });
+  }
+};
