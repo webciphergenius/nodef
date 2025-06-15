@@ -228,8 +228,8 @@ exports.listAcceptedShipments = async (req, res) => {
     if (userRole === "driver") {
       query = `
         SELECT s.*, 
-               d.first_name AS driver_first_name, d.last_name AS driver_last_name, d.phone AS driver_phone, d.email AS driver_email, d.vehicle_type AS driver_vehicle_type,
-               ship.id AS shipper_id, ship.first_name AS shipper_firstname, ship.last_name AS shipper_last_name, ship.phone AS shipper_phone, ship.email AS shipper_email
+               d.first_name AS driver_firstname, d.last_name AS driver_lastname, d.phone AS driver_phone, d.email AS driver_email, d.vehicle_type AS driver_vehicle_type,
+               ship.id AS shipper_id, ship.first_name AS shipper_firstname, ship.last_name AS shipper_lastname, ship.phone AS shipper_phone, ship.email AS shipper_email
         FROM shipments s
         JOIN users d ON s.driver_id = d.id
         JOIN users ship ON s.shipper_id = ship.id
@@ -239,8 +239,8 @@ exports.listAcceptedShipments = async (req, res) => {
     } else if (userRole === "shipper") {
       query = `
         SELECT s.*, 
-               d.id AS driver_id, d.first_name AS driver_first_name, d.last_name AS driver_lastname, d.phone AS driver_phone, d.email AS driver_email, d.vehicle_type AS driver_vehicle_type,
-               ship.first_name AS shipper_first_name, ship.last_name AS shipper_lastname, ship.phone AS shipper_phone, ship.email AS shipper_email
+               d.id AS driver_id, d.first_name AS driver_firstname, d.last_name AS driver_lastname, d.phone AS driver_phone, d.email AS driver_email, d.vehicle_type AS driver_vehicle_type,
+               ship.first_name AS shipper_firstname, ship.last_name AS shipper_lastname, ship.phone AS shipper_phone, ship.email AS shipper_email
         FROM shipments s
         JOIN users d ON s.driver_id = d.id
         JOIN users ship ON s.shipper_id = ship.id
