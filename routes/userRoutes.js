@@ -26,7 +26,12 @@ router.post("/resend-otp", controller.resendOtp);
 router.post("/login", controller.loginUser);
 router.post("/logout", controller.logoutUser);
 router.get("/profile", controller.getUserProfile);
-router.put("/profile", controller.updateUserProfile);
+router.put(
+  "/profile",
+  authenticateUser,
+  upload.single("profile_image"),
+  controller.updateUserProfile
+);
 router.post("/forgot-password", controller.forgotPassword);
 router.post("/reset-password", controller.resetPassword);
 

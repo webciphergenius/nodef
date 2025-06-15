@@ -180,9 +180,11 @@ exports.updateUserProfile = async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer "))
       return res.status(401).json({ msg: "Unauthorized" });
+
     const token = authHeader.split(" ")[1];
     if (tokenBlacklist.has(token))
       return res.status(401).json({ msg: "Token has been invalidated" });
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const {
       first_name,
@@ -196,22 +198,36 @@ exports.updateUserProfile = async (req, res) => {
       load_capacity,
       country,
     } = req.body;
-    await db.query(
-      "UPDATE users SET first_name = ?, last_name = ?, email = ?, company = ?, zipcode = ?, address = ?, vehicle_type = ?, vehicle_number = ?, load_capacity = ?, country = ? WHERE id = ?",
-      [
-        first_name,
-        last_name,
-        email,
-        company,
-        zipcode,
-        address,
-        vehicle_type,
-        vehicle_number,
-        load_capacity,
-        country,
-        decoded.id,
-      ]
-    );
+
+    const profile_image = req.file ? `/uploads/${req.file.filename}` : null;
+
+    let query = `
+      UPDATE users 
+      SET first_name = ?, last_name = ?, email = ?, company = ?, zipcode = ?, address = ?, vehicle_type = ?, vehicle_number = ?, load_capacity = ?, country = ?
+    `;
+    const params = [
+      first_name,
+      last_name,
+      email,
+      company,
+      zipcode,
+      address,
+      vehicle_type,
+      vehicle_number,
+      load_capacity,
+      country,
+    ];
+
+    if (profile_image) {
+      query += `, profile_image = ?`;
+      params.push(profile_image);
+    }
+
+    query += ` WHERE id = ?`;
+    params.push(decoded.id);
+
+    await db.query(query, params);
+
     res.status(200).json({ msg: "Profile updated successfully" });
   } catch (err) {
     console.error(err);
