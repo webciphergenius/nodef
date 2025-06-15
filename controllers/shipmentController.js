@@ -15,8 +15,12 @@ exports.createShipment = async (req, res) => {
     vehicle_type,
     pickup_zip,
     pickup_location_name,
+    pickup_lat,
+    pickup_lng,
     dropoff_zip,
     dropoff_location_name,
+    dropoff_lat,
+    dropoff_lng,
     package_instructions,
     service_level,
     declared_value,
@@ -29,9 +33,14 @@ exports.createShipment = async (req, res) => {
     !dropoff_zip ||
     !service_level ||
     !declared_value ||
-    !terms_acknowledged
-  )
+    !terms_acknowledged ||
+    !pickup_lat ||
+    !pickup_lng ||
+    !dropoff_lat ||
+    !dropoff_lng
+  ) {
     return res.status(400).json({ msg: "Missing required shipment fields" });
+  }
 
   const shipment_images = req.files?.map((f) => `/uploads/${f.filename}`) || [];
 
@@ -42,9 +51,7 @@ exports.createShipment = async (req, res) => {
         {
           price_data: {
             currency: "usd",
-            product_data: {
-              name: "FreightMate Shipment Payment",
-            },
+            product_data: { name: "FreightMate Shipment Payment" },
             unit_amount: parseFloat(declared_value) * 100,
           },
           quantity: 1,
@@ -59,15 +66,26 @@ exports.createShipment = async (req, res) => {
       cancel_url: "https://yourdomain.com/payment-cancel",
     });
 
+    // Insert shipment (without shipment_identifier yet)
     const [result] = await db.query(
-      "INSERT INTO shipments (shipper_id, vehicle_type, pickup_zip, pickup_location_name, dropoff_zip, dropoff_location_name, package_instructions, shipment_images, service_level, declared_value, terms_acknowledged, stripe_payment_id, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      `INSERT INTO shipments (
+        shipper_id, vehicle_type, pickup_zip, pickup_location_name,
+        pickup_lat, pickup_lng, dropoff_zip, dropoff_location_name,
+        dropoff_lat, dropoff_lng, package_instructions, shipment_images,
+        service_level, declared_value, terms_acknowledged, 
+        stripe_payment_id, payment_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         shipper_id,
         vehicle_type,
         pickup_zip,
         pickup_location_name,
+        pickup_lat,
+        pickup_lng,
         dropoff_zip,
         dropoff_location_name,
+        dropoff_lat,
+        dropoff_lng,
         package_instructions,
         JSON.stringify(shipment_images),
         service_level,
@@ -78,8 +96,21 @@ exports.createShipment = async (req, res) => {
       ]
     );
 
+    const shipmentId = result.insertId;
+    const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
+    const shipment_identifier = `shipment-${dateStr}-${String(
+      shipmentId
+    ).padStart(5, "0")}`;
+
+    // Update with custom shipment_identifier
+    await db.query(
+      `UPDATE shipments SET shipment_identifier = ? WHERE id = ?`,
+      [shipment_identifier, shipmentId]
+    );
+
     res.status(201).json({
       msg: "Shipment created. Complete payment to proceed.",
+      shipment_identifier,
       payment_url: session.url,
     });
   } catch (err) {
@@ -87,6 +118,7 @@ exports.createShipment = async (req, res) => {
     res.status(500).json({ msg: "Failed to create shipment or payment link" });
   }
 };
+
 // Get all shipments created by logged-in shipper with payment done (active)
 exports.getActiveShipments = async (req, res) => {
   try {
