@@ -225,14 +225,14 @@ exports.listAcceptedShipments = async (req, res) => {
       `SELECT 
         s.*, 
         d.id AS driver_id, 
-        d.firstname AS driver_firstname, 
-        d.lastname AS driver_lastname, 
+        d.first_name AS driver_firstname, 
+        d.last_name AS driver_lastname, 
         d.phone AS driver_phone, 
         d.email AS driver_email,
         d.vehicle_type AS driver_vehicle_type,
         ship.id AS shipper_id,
-        ship.firstname AS shipper_firstname,
-        ship.lastname AS shipper_lastname,
+        ship.first_name AS shipper_firstname,
+        ship.last_name AS shipper_lastname,
         ship.phone AS shipper_phone,
         ship.email AS shipper_email
       FROM shipments s
