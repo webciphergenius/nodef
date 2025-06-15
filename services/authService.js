@@ -13,7 +13,12 @@ exports.loginUser = async (table, phone, password) => {
   if (!match) return null;
 
   const token = jwt.sign(
-    { id: user.id, username: user.username, phone: user.phone },
+    {
+      id: user.id,
+      username: user.username,
+      phone: user.phone,
+      role: user.role,
+    },
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
