@@ -1,7 +1,7 @@
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-
+const { sendNotification } = require("../services/notificationService");
 exports.createShipment = async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer "))
@@ -107,7 +107,10 @@ exports.createShipment = async (req, res) => {
       `UPDATE shipments SET shipment_identifier = ? WHERE id = ?`,
       [shipment_identifier, shipmentId]
     );
-
+    await sendNotification(
+      shipper_id,
+      `Your shipment (${shipment_identifier}) has been created and sent to the drivers. Waiting for the drivers to accept.`
+    );
     res.status(201).json({
       msg: "Shipment created. Complete payment to proceed.",
       shipment_identifier,
@@ -206,10 +209,26 @@ exports.acceptShipment = async (req, res) => {
         .status(400)
         .json({ msg: "Shipment already accepted by another driver" });
 
+    // Get driver details
+    const [[driver]] = await db.query(
+      "SELECT first_name, last_name FROM users WHERE id = ?",
+      [driverId]
+    );
+
+    const driverName = `${driver.first_name} ${driver.last_name}`;
+    const shipmentIdentifier = shipment.shipment_identifier;
+
+    // Update shipment
     await db.query("UPDATE shipments SET driver_id = ? WHERE id = ?", [
       driverId,
       shipmentId,
     ]);
+
+    // ✅ Send notification to shipper
+    await sendNotification(
+      shipment.shipper_id,
+      `Your shipment (${shipmentIdentifier}) has been accepted by the driver “${driverName}”`
+    );
 
     res.status(200).json({ msg: "Shipment accepted successfully" });
   } catch (err) {

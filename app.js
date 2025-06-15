@@ -7,7 +7,8 @@ const bodyParser = require("body-parser");
 const unifiedRoutes = require("./routes/userRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
-
+const notificationRoutes = require("./routes/notificationRoutes");
+app.use("/api/notifications", notificationRoutes);
 // ✅ Stripe webhook must be BEFORE express.json()
 app.use("/api/webhook", express.raw({ type: "application/json" }));
 app.use("/api/webhook", stripeWebhookRoutes); // Mount after raw
