@@ -168,7 +168,7 @@ exports.getCompletedShipments = async (req, res) => {
 exports.listAvailableShipments = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT id, vehicle_type, pickup_zip, dropoff_zip, service_level, declared_value, shipment_images, created_at,shipper_id,driver_id FROM shipments WHERE payment_status = 'paid' AND driver_id IS NULL"
+      "SELECT * FROM shipments WHERE payment_status = 'paid' AND driver_id IS NULL"
     );
 
     const formatted = rows.map((row) => ({
@@ -220,16 +220,66 @@ exports.acceptShipment = async (req, res) => {
 exports.listAcceptedShipments = async (req, res) => {
   try {
     const driverId = req.user.id;
+
     const [rows] = await db.query(
-      "SELECT * FROM shipments WHERE driver_id = ? AND is_completed = 0",
+      `SELECT 
+        s.*, 
+        d.id AS driver_id, 
+        d.firstname AS driver_firstname, 
+        d.lastname AS driver_lastname, 
+        d.phone AS driver_phone, 
+        d.email AS driver_email,
+        d.vehicle_type AS driver_vehicle_type,
+        ship.id AS shipper_id,
+        ship.firstname AS shipper_firstname,
+        ship.lastname AS shipper_lastname,
+        ship.phone AS shipper_phone,
+        ship.email AS shipper_email
+      FROM shipments s
+      JOIN users d ON s.driver_id = d.id
+      JOIN users ship ON s.shipper_id = ship.id
+      WHERE s.driver_id = ? AND s.is_completed = 0`,
       [driverId]
     );
 
     const formatted = rows.map((row) => ({
-      ...row,
+      id: row.id,
+      shipment_identifier: row.shipment_identifier,
+      vehicle_type: row.vehicle_type,
+      pickup_zip: row.pickup_zip,
+      pickup_location_name: row.pickup_location_name,
+      pickup_lat: row.pickup_lat,
+      pickup_lng: row.pickup_lng,
+      dropoff_zip: row.dropoff_zip,
+      dropoff_location_name: row.dropoff_location_name,
+      dropoff_lat: row.dropoff_lat,
+      dropoff_lng: row.dropoff_lng,
+      package_instructions: row.package_instructions,
+      service_level: row.service_level,
+      declared_value: row.declared_value,
+      payment_status: row.payment_status,
+      stripe_payment_id: row.stripe_payment_id,
+      created_at: row.created_at,
       shipment_images: Array.isArray(row.shipment_images)
         ? row.shipment_images
         : JSON.parse(row.shipment_images || "[]"),
+
+      driver: {
+        id: row.driver_id,
+        firstname: row.driver_firstname,
+        lastname: row.driver_lastname,
+        phone: row.driver_phone,
+        email: row.driver_email,
+        vehicle_type: row.driver_vehicle_type,
+      },
+
+      shipper: {
+        id: row.shipper_id,
+        firstname: row.shipper_firstname,
+        lastname: row.shipper_lastname,
+        phone: row.shipper_phone,
+        email: row.shipper_email,
+      },
     }));
 
     res.json(formatted);
@@ -238,6 +288,7 @@ exports.listAcceptedShipments = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch accepted shipments" });
   }
 };
+
 //track shipment
 exports.updateLocation = async (req, res) => {
   const { latitude, longitude } = req.body;
