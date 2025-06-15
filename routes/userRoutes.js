@@ -3,7 +3,7 @@ const router = express.Router();
 const controller = require("../controllers/userController");
 const multer = require("multer");
 const path = require("path");
-
+const { authenticateUser } = require("../services/authService");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
@@ -24,8 +24,8 @@ router.post(
 router.post("/verify-otp", controller.verifyOtp);
 router.post("/resend-otp", controller.resendOtp);
 router.post("/login", controller.loginUser);
-router.post("/logout", controller.logoutUser);
-router.get("/profile", controller.getUserProfile);
+router.post("/logout", authenticateUser, controller.logoutUser);
+router.get("/profile", authenticateUser, controller.getUserProfile);
 router.put(
   "/profile",
   authenticateUser,
