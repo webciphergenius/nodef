@@ -219,28 +219,39 @@ exports.acceptShipment = async (req, res) => {
 };
 exports.listAcceptedShipments = async (req, res) => {
   try {
-    const driverId = req.user.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
-    const [rows] = await db.query(
-      `SELECT 
-        s.*, 
-        d.id AS driver_id, 
-        d.first_name AS driver_firstname, 
-        d.last_name AS driver_lastname, 
-        d.phone AS driver_phone, 
-        d.email AS driver_email,
-        d.vehicle_type AS driver_vehicle_type,
-        ship.id AS shipper_id,
-        ship.first_name AS shipper_firstname,
-        ship.last_name AS shipper_lastname,
-        ship.phone AS shipper_phone,
-        ship.email AS shipper_email
-      FROM shipments s
-      JOIN users d ON s.driver_id = d.id
-      JOIN users ship ON s.shipper_id = ship.id
-      WHERE s.driver_id = ? AND s.is_completed = 0`,
-      [driverId]
-    );
+    let query = "";
+    let params = [];
+
+    if (userRole === "driver") {
+      query = `
+        SELECT s.*, 
+               d.first_name AS driver_first_name, d.last_name AS driver_last_name, d.phone AS driver_phone, d.email AS driver_email, d.vehicle_type AS driver_vehicle_type,
+               ship.id AS shipper_id, ship.first_name AS shipper_firstname, ship.last_name AS shipper_last_name, ship.phone AS shipper_phone, ship.email AS shipper_email
+        FROM shipments s
+        JOIN users d ON s.driver_id = d.id
+        JOIN users ship ON s.shipper_id = ship.id
+        WHERE s.driver_id = ? AND s.is_completed = 0
+      `;
+      params = [userId];
+    } else if (userRole === "shipper") {
+      query = `
+        SELECT s.*, 
+               d.id AS driver_id, d.first_name AS driver_first_name, d.last_name AS driver_lastname, d.phone AS driver_phone, d.email AS driver_email, d.vehicle_type AS driver_vehicle_type,
+               ship.first_name AS shipper_first_name, ship.last_name AS shipper_lastname, ship.phone AS shipper_phone, ship.email AS shipper_email
+        FROM shipments s
+        JOIN users d ON s.driver_id = d.id
+        JOIN users ship ON s.shipper_id = ship.id
+        WHERE s.shipper_id = ? AND s.driver_id IS NOT NULL AND s.is_completed = 0
+      `;
+      params = [userId];
+    } else {
+      return res.status(403).json({ msg: "Unauthorized user role" });
+    }
+
+    const [rows] = await db.query(query, params);
 
     const formatted = rows.map((row) => ({
       id: row.id,
@@ -263,7 +274,6 @@ exports.listAcceptedShipments = async (req, res) => {
       shipment_images: Array.isArray(row.shipment_images)
         ? row.shipment_images
         : JSON.parse(row.shipment_images || "[]"),
-
       driver: {
         id: row.driver_id,
         firstname: row.driver_firstname,
@@ -272,7 +282,6 @@ exports.listAcceptedShipments = async (req, res) => {
         email: row.driver_email,
         vehicle_type: row.driver_vehicle_type,
       },
-
       shipper: {
         id: row.shipper_id,
         firstname: row.shipper_firstname,
