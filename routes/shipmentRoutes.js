@@ -32,4 +32,10 @@ router.get(
   controller.getLatestLocation
 );
 router.get("/counts", authenticateUser, controller.getShipmentCounts);
+router.get(
+  "/driver/dashboard",
+  authenticateUser,
+  controller.getDriverDashboardStats
+);
+
 module.exports = router;

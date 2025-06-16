@@ -92,7 +92,7 @@ exports.createShipment = async (req, res) => {
         declared_value,
         terms_acknowledged,
         session.id,
-        "pending",
+        "paid",
       ]
     );
 
@@ -377,5 +377,34 @@ exports.getShipmentCounts = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to fetch shipment counts" });
+  }
+};
+exports.getDriverDashboardStats = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+
+    const [[{ total }]] = await db.query(
+      "SELECT COUNT(*) AS total FROM shipments WHERE driver_id = ?",
+      [driverId]
+    );
+
+    const [[{ completed }]] = await db.query(
+      "SELECT COUNT(*) AS completed FROM shipments WHERE driver_id = ? AND is_completed = 1",
+      [driverId]
+    );
+
+    const [[{ in_transit }]] = await db.query(
+      "SELECT COUNT(*) AS in_transit FROM shipments WHERE driver_id = ? AND is_completed = 0",
+      [driverId]
+    );
+
+    res.status(200).json({
+      total_shipments: total,
+      completed_shipments: completed,
+      in_transit_shipments: in_transit,
+    });
+  } catch (err) {
+    console.error("Driver dashboard stats error:", err);
+    res.status(500).json({ msg: "Failed to load dashboard stats" });
   }
 };
