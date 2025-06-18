@@ -157,7 +157,7 @@ exports.getCompletedShipments = async (req, res) => {
     const shipperId = decoded.id;
 
     const [rows] = await db.query(
-      "SELECT * FROM shipments WHERE shipper_id = ? AND is_completed = 1",
+      "SELECT * FROM shipments WHERE shipper_id = ? AND status = 'completed'",
       [shipperId]
     );
 
@@ -167,6 +167,7 @@ exports.getCompletedShipments = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch completed shipments" });
   }
 };
+
 //list available shipments for drivers
 exports.listAvailableShipments = async (req, res) => {
   try {
@@ -218,11 +219,11 @@ exports.acceptShipment = async (req, res) => {
     const driverName = `${driver.first_name} ${driver.last_name}`;
     const shipmentIdentifier = shipment.shipment_identifier;
 
-    // Update shipment
-    await db.query("UPDATE shipments SET driver_id = ? WHERE id = ?", [
-      driverId,
-      shipmentId,
-    ]);
+    // Update shipment: assign driver and set status to 'accepted'
+    await db.query(
+      "UPDATE shipments SET driver_id = ?, status = 'accepted' WHERE id = ?",
+      [driverId, shipmentId]
+    );
 
     // ✅ Send notification to shipper
     await sendNotification(
@@ -236,6 +237,7 @@ exports.acceptShipment = async (req, res) => {
     res.status(500).json({ msg: "Failed to accept shipment" });
   }
 };
+
 exports.listAcceptedShipments = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -252,7 +254,7 @@ exports.listAcceptedShipments = async (req, res) => {
         FROM shipments s
         JOIN users d ON s.driver_id = d.id
         JOIN users ship ON s.shipper_id = ship.id
-        WHERE s.driver_id = ? AND s.is_completed = 0
+        WHERE s.driver_id = ? AND s.status IN ('accepted', 'picked_up', 'in_transit')
       `;
       params = [userId];
     } else if (userRole === "shipper") {
@@ -263,7 +265,7 @@ exports.listAcceptedShipments = async (req, res) => {
         FROM shipments s
         JOIN users d ON s.driver_id = d.id
         JOIN users ship ON s.shipper_id = ship.id
-        WHERE s.shipper_id = ? AND s.driver_id IS NOT NULL AND s.is_completed = 0
+        WHERE s.shipper_id = ? AND s.driver_id IS NOT NULL AND s.status IN ('accepted', 'picked_up', 'in_transit')
       `;
       params = [userId];
     } else {
@@ -289,6 +291,7 @@ exports.listAcceptedShipments = async (req, res) => {
       declared_value: row.declared_value,
       payment_status: row.payment_status,
       stripe_payment_id: row.stripe_payment_id,
+      status: row.status,
       created_at: row.created_at,
       shipment_images: Array.isArray(row.shipment_images)
         ? row.shipment_images
@@ -365,9 +368,9 @@ exports.getShipmentCounts = async (req, res) => {
     const [rows] = await db.query(
       `SELECT 
          COUNT(*) AS total_shipments,
-         SUM(CASE WHEN driver_id IS NOT NULL AND is_completed = 0 THEN 1 ELSE 0 END) AS in_transit,
-         SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) AS completed,
-         SUM(CASE WHEN driver_id IS NULL THEN 1 ELSE 0 END) AS pending
+         SUM(CASE WHEN status IN ('accepted', 'picked_up', 'in_transit') THEN 1 ELSE 0 END) AS in_transit,
+         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending
        FROM shipments
        WHERE shipper_id = ? AND payment_status = 'paid'`,
       [shipperId]
@@ -379,32 +382,99 @@ exports.getShipmentCounts = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch shipment counts" });
   }
 };
+
 exports.getDriverDashboardStats = async (req, res) => {
   try {
     const driverId = req.user.id;
 
-    const [[{ total }]] = await db.query(
-      "SELECT COUNT(*) AS total FROM shipments WHERE driver_id = ?",
+    const [[stats]] = await db.query(
+      `SELECT 
+         COUNT(*) AS total_shipments,
+         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_shipments,
+         SUM(CASE WHEN status IN ('accepted', 'picked_up', 'in_transit') THEN 1 ELSE 0 END) AS in_transit_shipments
+       FROM shipments
+       WHERE driver_id = ?`,
       [driverId]
     );
 
-    const [[{ completed }]] = await db.query(
-      "SELECT COUNT(*) AS completed FROM shipments WHERE driver_id = ? AND is_completed = 1",
-      [driverId]
-    );
-
-    const [[{ in_transit }]] = await db.query(
-      "SELECT COUNT(*) AS in_transit FROM shipments WHERE driver_id = ? AND is_completed = 0",
-      [driverId]
-    );
-
-    res.status(200).json({
-      total_shipments: total,
-      completed_shipments: completed,
-      in_transit_shipments: in_transit,
-    });
+    res.status(200).json(stats);
   } catch (err) {
     console.error("Driver dashboard stats error:", err);
     res.status(500).json({ msg: "Failed to load dashboard stats" });
+  }
+};
+exports.markPickedUp = async (req, res) => {
+  try {
+    const shipmentId = req.params.shipmentId;
+    const driverId = req.user.id;
+
+    const [rows] = await db.query(
+      "SELECT * FROM shipments WHERE id = ? AND driver_id = ?",
+      [shipmentId, driverId]
+    );
+
+    if (!rows.length)
+      return res
+        .status(404)
+        .json({ msg: "Shipment not found or not assigned to you" });
+
+    await db.query("UPDATE shipments SET status = 'picked_up' WHERE id = ?", [
+      shipmentId,
+    ]);
+
+    res.status(200).json({ msg: "Shipment marked as picked up" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to update shipment status" });
+  }
+};
+exports.markInTransit = async (req, res) => {
+  try {
+    const shipmentId = req.params.shipmentId;
+    const driverId = req.user.id;
+
+    const [rows] = await db.query(
+      "SELECT * FROM shipments WHERE id = ? AND driver_id = ?",
+      [shipmentId, driverId]
+    );
+
+    if (!rows.length)
+      return res
+        .status(404)
+        .json({ msg: "Shipment not found or not assigned to you" });
+
+    await db.query("UPDATE shipments SET status = 'in_transit' WHERE id = ?", [
+      shipmentId,
+    ]);
+
+    res.status(200).json({ msg: "Shipment marked as in transit" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to update shipment status" });
+  }
+};
+exports.markDelivered = async (req, res) => {
+  try {
+    const shipmentId = req.params.shipmentId;
+    const driverId = req.user.id;
+
+    const [rows] = await db.query(
+      "SELECT * FROM shipments WHERE id = ? AND driver_id = ?",
+      [shipmentId, driverId]
+    );
+
+    if (!rows.length)
+      return res
+        .status(404)
+        .json({ msg: "Shipment not found or not assigned to you" });
+
+    await db.query("UPDATE shipments SET status = 'completed' WHERE id = ?", [
+      shipmentId,
+    ]);
+
+    res.status(200).json({ msg: "Shipment marked as delivered" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to update shipment status" });
   }
 };

@@ -37,5 +37,20 @@ router.get(
   authenticateUser,
   controller.getDriverDashboardStats
 );
+router.post(
+  "/mark-picked-up/:shipmentId",
+  authenticateUser,
+  controller.markPickedUp
+);
+router.post(
+  "/mark-in-transit/:shipmentId",
+  authenticateUser,
+  controller.markInTransit
+);
+router.post(
+  "/mark-delivered/:shipmentId",
+  authenticateUser,
+  controller.markDelivered
+);
 
 module.exports = router;
