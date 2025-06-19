@@ -157,7 +157,7 @@ exports.getCompletedShipments = async (req, res) => {
     const shipperId = decoded.id;
 
     const [rows] = await db.query(
-      "SELECT * FROM shipments WHERE shipper_id = ? AND status = 'completed'",
+      "SELECT * FROM shipments WHERE shipper_id = ? AND status = 'delivered'",
       [shipperId]
     );
 
@@ -369,7 +369,7 @@ exports.getShipmentCounts = async (req, res) => {
       `SELECT 
          COUNT(*) AS total_shipments,
          SUM(CASE WHEN status IN ('accepted', 'picked_up', 'in_transit') THEN 1 ELSE 0 END) AS in_transit,
-         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+         SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS completed,
          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending
        FROM shipments
        WHERE shipper_id = ? AND payment_status = 'paid'`,
@@ -468,7 +468,7 @@ exports.markDelivered = async (req, res) => {
         .status(404)
         .json({ msg: "Shipment not found or not assigned to you" });
 
-    await db.query("UPDATE shipments SET status = 'completed' WHERE id = ?", [
+    await db.query("UPDATE shipments SET status = 'delivered' WHERE id = ?", [
       shipmentId,
     ]);
 
