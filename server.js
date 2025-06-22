@@ -52,6 +52,32 @@ io.on("connection", (socket) => {
     }
   });
 });
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
 
+  socket.on(
+    "location_update",
+    async ({ shipmentId, driverId, latitude, longitude }) => {
+      try {
+        // Save to locations table
+        await db.query(
+          "INSERT INTO locations (shipment_id, driver_id, latitude, longitude) VALUES (?, ?, ?, ?)",
+          [shipmentId, driverId, latitude, longitude]
+        );
+
+        // Emit to clients who might be watching this shipment
+        io.emit(`shipment_${shipmentId}_location`, {
+          driverId,
+          latitude,
+          longitude,
+          shipmentId,
+          timestamp: new Date(),
+        });
+      } catch (err) {
+        console.error("Location update error:", err);
+      }
+    }
+  );
+});
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
