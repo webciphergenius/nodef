@@ -31,6 +31,11 @@ router.get(
   authenticateUser,
   controller.getLatestLocation
 );
+router.get(
+  "/latest/:shipmentId",
+  authenticateUser,
+  controller.getLatestLocation
+);
 router.get("/counts", authenticateUser, controller.getShipmentCounts);
 router.get(
   "/driver/dashboard",
