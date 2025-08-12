@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drivers - Admin Panel</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    />
+  </head>
+  <body>
+    <%- include('partials/admin-navbar', { admin: admin }) %>
+    <div class="container mt-4">
+      <h2>All Drivers</h2>
+      <table class="table table-bordered table-striped mt-3">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Username</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% drivers.forEach(function(driver) { %>
+          <tr>
+            <td><%= driver.id %></td>
+            <td><%= driver.first_name %> <%= driver.last_name %></td>
+            <td><%= driver.username %></td>
+            <td><%= driver.phone %></td>
+            <td><%= driver.email %></td>
+            <td><%= driver.is_blocked ? 'Blocked' : 'Active' %></td>
+            <td>
+              <% if (driver.is_blocked) { %>
+              <form
+                method="POST"
+                action="/admin/user/<%= driver.id %>/unblock"
+                style="display: inline"
+              >
+                <button type="submit" class="btn btn-success btn-sm">
+                  Unblock
+                </button>
+              </form>
+              <% } else { %>
+              <form
+                method="POST"
+                action="/admin/user/<%= driver.id %>/block"
+                style="display: inline"
+              >
+                <button type="submit" class="btn btn-warning btn-sm">
+                  Block
+                </button>
+              </form>
+              <% } %>
+              <form
+                method="POST"
+                action="/admin/user/<%= driver.id %>/delete"
+                style="display: inline"
+                onsubmit="return confirm('Are you sure you want to delete this user?');"
+              >
+                <button type="submit" class="btn btn-danger btn-sm">
+                  Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

@@ -1,23 +1,71 @@
 const express = require("express");
 const app = express();
 const path = require("path");
+const cors = require("cors");
+const session = require("express-session");
 
 const chatRoutes = require("./routes/chatRoutes");
-const bodyParser = require("body-parser");
 const unifiedRoutes = require("./routes/userRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
-app.use("/api/notifications", notificationRoutes);
-// ✅ Stripe webhook must be BEFORE express.json()
-app.use("/api/webhook", express.raw({ type: "application/json" }));
-app.use("/api/webhook", stripeWebhookRoutes); // Mount after raw
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-// ✅ All other JSON routes after this
+const adminRoutes = require("./routes/adminRoutes");
+const stripeConnectRoutes = require("./routes/stripeConnectRoutes");
+
+const allowedOrigins = ["http://localhost:8000", "http://127.0.0.1:8000"];
+
+// CORS for /api
+app.use(
+  "/api",
+  cors({
+    origin(origin, cb) {
+      if (allowedOrigins.indexOf(origin) !== -1 || !origin) cb(null, true);
+      else cb(new Error("Not allowed by CORS"));
+    },
+  })
+);
+
+// ---------- RAW BODY FOR STRIPE WEBHOOKS (must be BEFORE express.json) ----------
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+app.use(
+  "/api/stripe/connect-webhook",
+  express.raw({ type: "application/json" })
+);
+
+// Your Stripe Checkout webhook (if you still use it)
+app.use(
+  "/api/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhookRoutes
+);
+
+// ---------- NORMAL PARSERS AFTER RAW ----------
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ---------- STATIC ----------
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/public", express.static(path.join(__dirname, "public")));
+
+// ---------- ROUTES ----------
+app.use("/api/notifications", notificationRoutes);
+app.use("/api", stripeConnectRoutes); // now json is available for req.body
 app.use("/api/chat", chatRoutes);
 app.use("/api", unifiedRoutes);
 app.use("/api/shipment", shipmentRoutes);
+
+// ---------- VIEWS & SESSION ----------
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
+app.use(
+  session({
+    secret: "your-secret-key",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+// Admin after parsers
+app.use("/admin", adminRoutes);
 
 module.exports = app;
