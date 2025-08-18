@@ -98,7 +98,7 @@ exports.createPaymentIntent = async (req, res) => {
     }
 
     const pi = await stripe.paymentIntents.create({
-      amount,
+      amount: Number(amount) * 100, // cents,
       currency: "usd",
       customer: customerId,
       capture_method: "manual",
