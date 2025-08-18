@@ -105,7 +105,7 @@ exports.createPaymentIntent = async (req, res) => {
       payment_method_types: ["card"], // explicit
     });
 
-    res.json({ success: true, paymentIntent: pi });
+    res.json({ success: true, client_secret: pi.client_secret });
   } catch (error) {
     console.error("createPaymentIntent error:", error);
     res.status(500).json({ success: false, error: error.message });
