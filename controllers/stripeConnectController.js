@@ -98,11 +98,11 @@ exports.createPaymentIntent = async (req, res) => {
     }
 
     const pi = await stripe.paymentIntents.create({
-      amount: Number(amount), // cents
+      amount,
       currency: "usd",
       customer: customerId,
-      capture_method: "manual", // change to "automatic" if you want immediate capture
-      automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+      capture_method: "manual",
+      payment_method_types: ["card"], // explicit
     });
 
     res.json({ success: true, paymentIntent: pi });
