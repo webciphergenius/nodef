@@ -239,3 +239,17 @@ exports.connectWebhook = async (req, res) => {
 
   res.sendStatus(200);
 };
+
+// TEMP: Clear stripe_customer_id and stripe_account_id for authenticated user (for testing)
+exports.clearStripeIds = async (req, res) => {
+  try {
+    await db.query(
+      "UPDATE users SET stripe_customer_id = NULL, stripe_account_id = NULL WHERE id = ?",
+      [req.user.id]
+    );
+    res.json({ success: true, message: "Stripe IDs cleared for user." });
+  } catch (error) {
+    console.error("clearStripeIds error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

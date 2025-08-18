@@ -24,6 +24,9 @@ router.post(
 );
 router.post("/stripe/payouts", authenticateUser, ctrl.payouts);
 
+// TEMP: Clear Stripe IDs for authenticated user (for testing)
+router.post("/stripe/clear-ids", authenticateUser, ctrl.clearStripeIds);
+
 // Public pages
 router.get("/stripe/success/:id", ctrl.success);
 router.get("/stripe/reauth/:id", ctrl.reauth);
