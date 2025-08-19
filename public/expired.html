@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Session Expired</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+    button { padding: 12px 24px; font-size: 18px; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Session Expired</h1>
+  <p>Your onboarding session has expired. Please try again.</p>
+  <button onclick="window.ReactNativeWebView && window.ReactNativeWebView.postMessage('reauth')">Close & Return</button>
+</body>
+</html>
