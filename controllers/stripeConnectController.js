@@ -224,11 +224,16 @@ exports.connectWebhook = async (req, res) => {
   switch (event.type) {
     case "account.updated": {
       const acct = event.data.object;
+      console.log(
+        "Stripe account.updated event received:",
+        JSON.stringify(acct, null, 2)
+      );
       if (acct.payouts_enabled) {
-        await db.query(
+        const [result] = await db.query(
           "UPDATE users SET is_stripe_verified = 1 WHERE stripe_account_id = ?",
           [acct.id]
         );
+        console.log("DB update result for is_stripe_verified:", result);
         // Optional: push notification + DB notification here, if you want.
       }
       break;
