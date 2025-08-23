@@ -210,6 +210,7 @@ exports.webhook = async (req, res) => {
 
 // CONNECT webhook (driver account events)
 exports.connectWebhook = async (req, res) => {
+  console.log("connectWebhook route hit");
   const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
   let event;

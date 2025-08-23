@@ -31,8 +31,4 @@ router.post("/stripe/clear-ids", authenticateUser, ctrl.clearStripeIds);
 router.get("/stripe/success/:id", ctrl.success);
 router.get("/stripe/reauth/:id", ctrl.reauth);
 
-// Webhooks (must receive raw body -> configured in app.js)
-router.post("/stripe/webhook", ctrl.webhook);
-router.post("/stripe/connect-webhook", ctrl.connectWebhook);
-
 module.exports = router;

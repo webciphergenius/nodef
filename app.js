@@ -7,10 +7,11 @@ const session = require("express-session");
 const chatRoutes = require("./routes/chatRoutes");
 const unifiedRoutes = require("./routes/userRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
-const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
+const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes"); // (platform/checkout webhook router if you use it)
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const stripeConnectRoutes = require("./routes/stripeConnectRoutes");
+const stripeConnectController = require("./controllers/stripeConnectController"); // ⬅️ add this
 
 const allowedOrigins = ["http://localhost:8000", "http://127.0.0.1:8000"];
 
@@ -25,18 +26,20 @@ app.use(
   })
 );
 
-// ---------- RAW BODY FOR STRIPE WEBHOOKS (must be BEFORE express.json) ----------
-app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
-app.use(
-  "/api/stripe/connect-webhook",
-  express.raw({ type: "application/json" })
+/**
+ * ---------- RAW BODY + DIRECT HANDLERS (must be BEFORE express.json) ----------
+ * Mount the webhook endpoints *with* express.raw and the controller handlers here.
+ */
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeConnectController.webhook // <-- your platform/checkout webhook handler (if you have one)
 );
 
-// Your Stripe Checkout webhook (if you still use it)
-app.use(
-  "/api/webhook",
+app.post(
+  "/api/stripe/connect-webhook",
   express.raw({ type: "application/json" }),
-  stripeWebhookRoutes
+  stripeConnectController.connectWebhook // <-- your Connect webhook handler
 );
 
 // ---------- NORMAL PARSERS AFTER RAW ----------
@@ -49,7 +52,7 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 
 // ---------- ROUTES ----------
 app.use("/api/notifications", notificationRoutes);
-app.use("/api", stripeConnectRoutes); // now json is available for req.body
+app.use("/api", stripeConnectRoutes); // <-- safe now: NO webhook endpoints inside this router
 app.use("/api/chat", chatRoutes);
 app.use("/api", unifiedRoutes);
 app.use("/api/shipment", shipmentRoutes);
