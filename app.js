@@ -32,20 +32,18 @@ app.use(
  */
 app.post(
   "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
   stripeConnectController.webhook // <-- your platform/checkout webhook handler (if you have one)
 );
 
 app.post(
   "/api/stripe/connect-webhook",
+  express.raw({ type: "application/json" }),
   stripeConnectController.connectWebhook // <-- your Connect webhook handler
 );
 
 // ---------- NORMAL PARSERS AFTER RAW ----------
-app.use(express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ---------- STATIC ----------

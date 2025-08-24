@@ -227,13 +227,12 @@ exports.webhook = async (req, res) => {
 // CONNECT webhook (driver account events)
 exports.connectWebhook = async (req, res) => {
   console.log("Connect webhook endpoint hit");
-  console.log("Raw request body:", req.body.toString());
   const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, connectWebhookSecret);
+    event = stripe.webhooks.constructEvent(req.body, sig, connectWebhookSecret);
   } catch (err) {
     console.error("Connect webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
