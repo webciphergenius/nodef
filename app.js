@@ -26,25 +26,27 @@ app.use(
   })
 );
 
+// ---------- PARSERS ----------
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+app.use(express.urlencoded({ extended: true }));
+
 /**
- * ---------- RAW BODY + DIRECT HANDLERS (must be BEFORE express.json) ----------
- * Mount the webhook endpoints *with* express.raw and the controller handlers here.
+ * ---------- WEBHOOKS ----------
+ * Mount the webhook endpoints here.
  */
 app.post(
   "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
   stripeConnectController.webhook // <-- your platform/checkout webhook handler (if you have one)
 );
 
 app.post(
   "/api/stripe/connect-webhook",
-  express.raw({ type: "application/json" }),
   stripeConnectController.connectWebhook // <-- your Connect webhook handler
 );
-
-// ---------- NORMAL PARSERS AFTER RAW ----------
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // ---------- STATIC ----------
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
