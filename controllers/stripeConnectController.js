@@ -183,6 +183,7 @@ exports.reauth = async (_req, res) => {
 
 // PLATFORM webhook (customers/payment_intents/etc.)
 exports.webhook = async (req, res) => {
+  console.log("Platform webhook endpoint hit");
   const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
   let event;
@@ -194,6 +195,8 @@ exports.webhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
+  console.log("Platform webhook event received:", event.type);
+
   switch (event.type) {
     case "charge.succeeded":
       // handle charge success if needed
@@ -201,6 +204,19 @@ exports.webhook = async (req, res) => {
     case "payment_intent.succeeded":
       // handle PI success if needed
       break;
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      const sessionId = session.id;
+
+      // ✅ Mark shipment as paid in DB
+      await db.query(
+        "UPDATE shipments SET payment_status = 'paid' WHERE stripe_payment_id = ?",
+        [sessionId]
+      );
+
+      console.log("✅ Shipment marked as paid:", sessionId);
+      break;
+    }
     default:
       console.log(`Unhandled platform event ${event.type}`);
   }
@@ -210,17 +226,20 @@ exports.webhook = async (req, res) => {
 
 // CONNECT webhook (driver account events)
 exports.connectWebhook = async (req, res) => {
-  console.log("connectWebhook route hit");
+  console.log("Connect webhook endpoint hit");
+  console.log("Raw request body:", req.body.toString());
   const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, connectWebhookSecret);
+    event = stripe.webhooks.constructEvent(req.rawBody, sig, connectWebhookSecret);
   } catch (err) {
     console.error("Connect webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
+
+  console.log("Connect webhook event received:", event.type);
 
   switch (event.type) {
     case "account.updated": {

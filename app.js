@@ -7,7 +7,7 @@ const session = require("express-session");
 const chatRoutes = require("./routes/chatRoutes");
 const unifiedRoutes = require("./routes/userRoutes");
 const shipmentRoutes = require("./routes/shipmentRoutes");
-const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes"); // (platform/checkout webhook router if you use it)
+
 const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const stripeConnectRoutes = require("./routes/stripeConnectRoutes");
@@ -32,18 +32,20 @@ app.use(
  */
 app.post(
   "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
   stripeConnectController.webhook // <-- your platform/checkout webhook handler (if you have one)
 );
 
 app.post(
   "/api/stripe/connect-webhook",
-  express.raw({ type: "application/json" }),
   stripeConnectController.connectWebhook // <-- your Connect webhook handler
 );
 
 // ---------- NORMAL PARSERS AFTER RAW ----------
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // ---------- STATIC ----------
