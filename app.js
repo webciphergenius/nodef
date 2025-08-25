@@ -14,6 +14,12 @@ const stripeConnectRoutes = require("./routes/stripeConnectRoutes");
 const stripeConnectController = require("./controllers/stripeConnectController"); // ⬅️ add this
 require("./config/payments_table");
 
+const fs = require('fs');
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
 // ---------- STATIC ----------
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/public", express.static(path.join(__dirname, "public")));
@@ -30,6 +36,10 @@ app.use(
     },
   })
 );
+
+// ---------- PARSERS ----------
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ---------- ROUTES ----------
 app.use("/api/notifications", notificationRoutes);
