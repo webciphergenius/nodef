@@ -12,6 +12,11 @@ const notificationRoutes = require("./routes/notificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const stripeConnectRoutes = require("./routes/stripeConnectRoutes");
 const stripeConnectController = require("./controllers/stripeConnectController"); // ⬅️ add this
+require("./config/payments_table");
+
+// ---------- STATIC ----------
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 const allowedOrigins = ["http://localhost:8000", "http://127.0.0.1:8000"];
 
@@ -25,32 +30,6 @@ app.use(
     },
   })
 );
-
-// ---------- PARSERS ----------
-app.use(express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-app.use(express.urlencoded({ extended: true }));
-
-/**
- * ---------- WEBHOOKS ----------
- * Mount the webhook endpoints here.
- */
-app.post(
-  "/api/stripe/webhook",
-  stripeConnectController.webhook // <-- your platform/checkout webhook handler (if you have one)
-);
-
-app.post(
-  "/api/stripe/connect-webhook",
-  stripeConnectController.connectWebhook // <-- your Connect webhook handler
-);
-
-// ---------- STATIC ----------
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.use("/public", express.static(path.join(__dirname, "public")));
 
 // ---------- ROUTES ----------
 app.use("/api/notifications", notificationRoutes);

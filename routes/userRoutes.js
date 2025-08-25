@@ -35,4 +35,8 @@ router.put(
 router.post("/forgot-password", controller.forgotPassword);
 router.post("/reset-password", controller.resetPassword);
 
+router.get("/shipper/payments", authenticateUser, controller.getShipperPayments);
+
+router.get("/driver/payments", authenticateUser, controller.getDriverPayments);
+
 module.exports = router;

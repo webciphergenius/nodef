@@ -107,6 +107,13 @@ exports.createShipment = async (req, res) => {
       `UPDATE shipments SET shipment_identifier = ? WHERE id = ?`,
       [shipment_identifier, shipmentId]
     );
+
+    // Create payment record
+    await db.query(
+      `INSERT INTO payments (shipment_id, shipper_id, amount, status) VALUES (?, ?, ?, ?)`,
+      [shipmentId, shipper_id, declared_value, "paid"]
+    );
+
     await sendNotification(
       shipper_id,
       `Your shipment (${shipment_identifier}) has been created and sent to the drivers. Waiting for the drivers to accept.`
@@ -222,6 +229,12 @@ exports.acceptShipment = async (req, res) => {
     // Update shipment: assign driver and set status to 'accepted'
     await db.query(
       "UPDATE shipments SET driver_id = ?, status = 'accepted' WHERE id = ?",
+      [driverId, shipmentId]
+    );
+
+    // Update payment record with driver_id
+    await db.query(
+      "UPDATE payments SET driver_id = ? WHERE shipment_id = ?",
       [driverId, shipmentId]
     );
 

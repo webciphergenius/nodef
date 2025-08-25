@@ -271,3 +271,43 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ msg: "Failed to reset password" });
   }
 };
+
+exports.getShipperPayments = async (req, res) => {
+  try {
+    const shipperId = req.user.id;
+
+    const [shipments] = await db.query(
+      "SELECT * FROM shipments WHERE shipper_id = ?",
+      [shipperId]
+    );
+
+    const totalPayments = shipments.reduce((acc, shipment) => {
+      return acc + parseFloat(shipment.declared_value);
+    }, 0);
+
+    res.status(200).json({ shipments, totalPayments });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to fetch shipper payments" });
+  }
+};
+
+exports.getDriverPayments = async (req, res) => {
+  try {
+    const driverId = req.user.id;
+
+    const [payments] = await db.query(
+      "SELECT p.*, s.shipment_identifier, s.pickup_location_name, s.dropoff_location_name, s.package_instructions, s.status FROM payments p JOIN shipments s ON p.shipment_id = s.id WHERE p.driver_id = ?",
+      [driverId]
+    );
+
+    const totalEarnings = payments.reduce((acc, payment) => {
+      return acc + parseFloat(payment.amount);
+    }, 0);
+
+    res.status(200).json({ payments, totalEarnings });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to fetch driver payments" });
+  }
+};
