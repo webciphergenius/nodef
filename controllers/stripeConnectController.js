@@ -232,7 +232,7 @@ exports.connectWebhook = async (req, res) => {
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, connectWebhookSecret);
+    event = stripe.webhooks.constructEvent(req.body, sig, connectWebhookSecret);
   } catch (err) {
     console.error("Connect webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

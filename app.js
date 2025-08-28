@@ -43,7 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ---------- ROUTES ----------
 app.use("/api/notifications", notificationRoutes);
-app.use("/api", stripeConnectRoutes); // <-- safe now: NO webhook endpoints inside this router
+app.use("/api", stripeConnectRoutes); // Webhook routes are defined inside with express.raw()
 app.use("/api/chat", chatRoutes);
 app.use("/api", unifiedRoutes);
 app.use("/api/shipment", shipmentRoutes);
