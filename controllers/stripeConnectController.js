@@ -182,10 +182,26 @@ exports.reauth = async (_req, res) => {
 };
 
 // PLATFORM webhook (customers/payment_intents/etc.)
+/*
 exports.webhook = async (req, res) => {
   console.log("Platform webhook endpoint hit");
   const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    console.error("Platform webhook error: missing stripe-signature header");
+    return res.status(400).send("Missing stripe-signature header");
+  }
+  if (!webhookSecret) {
+    console.error("Platform webhook error: STRIPE_WEBHOOK_SECRET is not set");
+    return res.status(500).send("Webhook not configured");
+  }
+  const isBuffer = Buffer.isBuffer(req.body);
+  if (!isBuffer) {
+    console.error(
+      "Platform webhook warning: req.body is not a Buffer; type:",
+      typeof req.body
+    );
+  }
   let event;
 
   try {
@@ -223,12 +239,29 @@ exports.webhook = async (req, res) => {
 
   res.sendStatus(200);
 };
-
+*/
 // CONNECT webhook (driver account events)
 exports.connectWebhook = async (req, res) => {
   console.log("Connect webhook endpoint hit");
   const stripe = getStripe();
   const sig = req.headers["stripe-signature"];
+  if (!sig) {
+    console.error("Connect webhook error: missing stripe-signature header");
+    return res.status(400).send("Missing stripe-signature header");
+  }
+  if (!connectWebhookSecret) {
+    console.error(
+      "Connect webhook error: STRIPE_CONNECT_WEBHOOK_SECRET is not set"
+    );
+    return res.status(500).send("Connect webhook not configured");
+  }
+  const isBuffer = Buffer.isBuffer(req.body);
+  if (!isBuffer) {
+    console.error(
+      "Connect webhook warning: req.body is not a Buffer; type:",
+      typeof req.body
+    );
+  }
   let event;
 
   try {
