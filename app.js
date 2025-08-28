@@ -39,11 +39,13 @@ app.use(
 
 // ---------- PARSERS ----------
 // Stripe webhooks must be defined BEFORE body parsers to access the raw body
-app.post(
-  "/api/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  stripeConnectController.webhook
-);
+if (typeof stripeConnectController.webhook === "function") {
+  app.post(
+    "/api/stripe/webhook",
+    express.raw({ type: "application/json" }),
+    stripeConnectController.webhook
+  );
+}
 app.post(
   "/api/stripe/connect-webhook",
   express.raw({ type: "application/json" }),
