@@ -20,6 +20,9 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
 
+// Stripe webhook needs to be before express.json()
+app.use("/api", stripeConnectRoutes);
+
 // ---------- STATIC ----------
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/public", express.static(path.join(__dirname, "public")));
@@ -43,7 +46,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // ---------- ROUTES ----------
 app.use("/api/notifications", notificationRoutes);
-app.use("/api", stripeConnectRoutes); // Webhook routes are defined inside with express.raw()
 app.use("/api/chat", chatRoutes);
 app.use("/api", unifiedRoutes);
 app.use("/api/shipment", shipmentRoutes);
