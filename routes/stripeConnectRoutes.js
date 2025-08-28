@@ -5,18 +5,7 @@ const ctrl = require("../controllers/stripeConnectController");
 
 const { authenticateUser } = require("../services/authService");
 
-// Webhooks
-// IMPORTANT: Needs to be before express.json() parser in app.js, or use express.raw()
-router.post(
-  "/stripe/webhook",
-  express.raw({ type: "application/json" }),
-  ctrl.webhook
-);
-router.post(
-  "/stripe/connect-webhook",
-  express.raw({ type: "application/json" }),
-  ctrl.connectWebhook
-);
+// Webhooks are registered at app-level before parsers in app.js
 
 // Authenticated actions
 router.post("/stripe/account", authenticateUser, ctrl.createAccount);

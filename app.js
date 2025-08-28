@@ -14,8 +14,8 @@ const stripeConnectRoutes = require("./routes/stripeConnectRoutes");
 const stripeConnectController = require("./controllers/stripeConnectController"); // ⬅️ add this
 require("./config/payments_table");
 
-const fs = require('fs');
-const uploadsDir = path.join(__dirname, 'uploads');
+const fs = require("fs");
+const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir);
 }
@@ -38,6 +38,18 @@ app.use(
 );
 
 // ---------- PARSERS ----------
+// Stripe webhooks must be defined BEFORE body parsers to access the raw body
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeConnectController.webhook
+);
+app.post(
+  "/api/stripe/connect-webhook",
+  express.raw({ type: "application/json" }),
+  stripeConnectController.connectWebhook
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
