@@ -6,3 +6,9 @@ exports.sendNotification = async (userId, message) => {
     message,
   ]);
 };
+
+// Lightweight QR helper; consider moving to utils/qr.js later
+const QRCode = require("qrcode");
+exports.generateQrDataUrl = async (text) => {
+  return QRCode.toDataURL(text, { errorCorrectionLevel: "M" });
+};

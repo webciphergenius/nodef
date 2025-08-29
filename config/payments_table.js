@@ -16,4 +16,31 @@ const createPaymentsTable = async () => {
   )`);
 };
 
+const alterShipmentsForQrAndMobile = async () => {
+  // Add recipient_mobile if missing
+  await db
+    .query(
+      `ALTER TABLE shipments 
+     ADD COLUMN IF NOT EXISTS recipient_mobile VARCHAR(20) NOT NULL AFTER dropoff_lng`
+    )
+    .catch(() => {});
+
+  // Add qr_token for confirmation flow
+  await db
+    .query(
+      `ALTER TABLE shipments 
+     ADD COLUMN IF NOT EXISTS qr_token VARCHAR(64) NULL AFTER shipment_images`
+    )
+    .catch(() => {});
+
+  // Optional expiry for QR token
+  await db
+    .query(
+      `ALTER TABLE shipments 
+     ADD COLUMN IF NOT EXISTS qr_expires_at DATETIME NULL AFTER qr_token`
+    )
+    .catch(() => {});
+};
+
 createPaymentsTable();
+alterShipmentsForQrAndMobile();

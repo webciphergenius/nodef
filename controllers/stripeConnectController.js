@@ -280,13 +280,40 @@ exports.connectWebhook = async (req, res) => {
         "Stripe account.updated event received:",
         JSON.stringify(acct, null, 2)
       );
-      if (acct.payouts_enabled) {
-        const [result] = await db.query(
-          "UPDATE users SET is_stripe_verified = 1 WHERE stripe_account_id = ?",
+      console.log("Connect webhook account id:", acct && acct.id);
+      // Consider account verified if payouts are enabled OR charges enabled with details submitted
+      const isVerified = !!(
+        acct &&
+        (acct.payouts_enabled ||
+          (acct.charges_enabled && acct.details_submitted))
+      );
+      if (isVerified) {
+        const [[maybeUser]] = await db.query(
+          "SELECT id FROM users WHERE stripe_account_id = ?",
           [acct.id]
         );
-        console.log("DB update result for is_stripe_verified:", result);
+        if (!maybeUser) {
+          console.warn(
+            "No user found with stripe_account_id for verified account:",
+            acct.id
+          );
+        } else {
+          const [result] = await db.query(
+            "UPDATE users SET is_stripe_verified = 1 WHERE stripe_account_id = ?",
+            [acct.id]
+          );
+          console.log("DB update result for is_stripe_verified:", result);
+        }
         // Optional: push notification + DB notification here, if you want.
+      } else {
+        console.log(
+          "Account not yet verified. payouts_enabled:",
+          acct && acct.payouts_enabled,
+          "charges_enabled:",
+          acct && acct.charges_enabled,
+          "details_submitted:",
+          acct && acct.details_submitted
+        );
       }
       break;
     }

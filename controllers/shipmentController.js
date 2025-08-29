@@ -1,7 +1,10 @@
 const db = require("../config/db");
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const { sendNotification } = require("../services/notificationService");
+const {
+  sendNotification,
+  generateQrDataUrl,
+} = require("../services/notificationService");
 exports.createShipment = async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer "))
@@ -25,6 +28,7 @@ exports.createShipment = async (req, res) => {
     service_level,
     declared_value,
     terms_acknowledged,
+    recipient_mobile,
   } = req.body;
 
   if (
@@ -37,7 +41,8 @@ exports.createShipment = async (req, res) => {
     !pickup_lat ||
     !pickup_lng ||
     !dropoff_lat ||
-    !dropoff_lng
+    !dropoff_lng ||
+    !recipient_mobile
   ) {
     return res.status(400).json({ msg: "Missing required shipment fields" });
   }
@@ -66,15 +71,17 @@ exports.createShipment = async (req, res) => {
       cancel_url: "https://yourdomain.com/payment-cancel",
     });
 
-    // Insert shipment (without shipment_identifier yet)
+    // Insert shipment (without shipment_identifier yet). Create qr_token now.
+    const qr_token = require("crypto").randomBytes(16).toString("hex");
+    const qr_expires_at = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
     const [result] = await db.query(
       `INSERT INTO shipments (
         shipper_id, vehicle_type, pickup_zip, pickup_location_name,
         pickup_lat, pickup_lng, dropoff_zip, dropoff_location_name,
-        dropoff_lat, dropoff_lng, package_instructions, shipment_images,
+        dropoff_lat, dropoff_lng, recipient_mobile, package_instructions, shipment_images,
         service_level, declared_value, terms_acknowledged, 
-        stripe_payment_id, payment_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        stripe_payment_id, payment_status, qr_token, qr_expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         shipper_id,
         vehicle_type,
@@ -86,6 +93,7 @@ exports.createShipment = async (req, res) => {
         dropoff_location_name,
         dropoff_lat,
         dropoff_lng,
+        recipient_mobile,
         package_instructions,
         JSON.stringify(shipment_images),
         service_level,
@@ -93,6 +101,8 @@ exports.createShipment = async (req, res) => {
         terms_acknowledged,
         session.id,
         "paid",
+        qr_token,
+        qr_expires_at,
       ]
     );
 
@@ -122,6 +132,8 @@ exports.createShipment = async (req, res) => {
       msg: "Shipment created. Complete payment to proceed.",
       shipment_identifier,
       payment_url: session.url,
+      recipient_mobile,
+      qr_token,
     });
   } catch (err) {
     console.error(err);
@@ -233,10 +245,10 @@ exports.acceptShipment = async (req, res) => {
     );
 
     // Update payment record with driver_id
-    await db.query(
-      "UPDATE payments SET driver_id = ? WHERE shipment_id = ?",
-      [driverId, shipmentId]
-    );
+    await db.query("UPDATE payments SET driver_id = ? WHERE shipment_id = ?", [
+      driverId,
+      shipmentId,
+    ]);
 
     // ✅ Send notification to shipper
     await sendNotification(
@@ -368,6 +380,101 @@ exports.getLatestLocation = async (req, res) => {
     res.status(500).json({ msg: "Failed to fetch location" });
   }
 };
+
+// Recipient enters mobile to confirm delivery (or trigger OTP)
+exports.confirmRecipientMobile = async (req, res) => {
+  try {
+    const { shipmentId } = req.params;
+    const { mobile } = req.body;
+    if (!mobile) return res.status(400).json({ msg: "Mobile is required" });
+
+    const [rows] = await db.query(
+      `SELECT recipient_mobile FROM shipments WHERE id = ?`,
+      [shipmentId]
+    );
+    if (!rows.length)
+      return res.status(404).json({ msg: "Shipment not found" });
+
+    const expected = rows[0].recipient_mobile;
+    if (
+      expected &&
+      expected.replace(/\D/g, "") === String(mobile).replace(/\D/g, "")
+    ) {
+      await db.query(`UPDATE shipments SET status = 'delivered' WHERE id = ?`, [
+        shipmentId,
+      ]);
+      return res.json({
+        msg: "Delivery confirmed by mobile match",
+        delivered: true,
+      });
+    }
+
+    // If mismatch, trigger OTP
+    const { generateAndSendOTP } = require("../services/otpService");
+    await generateAndSendOTP(expected);
+    return res.json({
+      msg: "Mobile mismatch. OTP sent to registered number.",
+      delivered: false,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to process recipient mobile" });
+  }
+};
+
+// Recipient submits OTP to confirm delivery
+exports.confirmRecipientOtp = async (req, res) => {
+  try {
+    const { shipmentId } = req.params;
+    const { otp } = req.body;
+    if (!otp) return res.status(400).json({ msg: "OTP is required" });
+
+    const [rows] = await db.query(
+      `SELECT recipient_mobile FROM shipments WHERE id = ?`,
+      [shipmentId]
+    );
+    if (!rows.length)
+      return res.status(404).json({ msg: "Shipment not found" });
+
+    const { verifyOTP } = require("../services/otpService");
+    const ok = await verifyOTP(rows[0].recipient_mobile, otp);
+    if (!ok) return res.status(400).json({ msg: "Invalid or expired OTP" });
+
+    await db.query(`UPDATE shipments SET status = 'delivered' WHERE id = ?`, [
+      shipmentId,
+    ]);
+    return res.json({ msg: "Delivery confirmed by OTP", delivered: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to verify OTP" });
+  }
+};
+// Return QR image for a shipment (driver or shipper can view)
+exports.getShipmentQr = async (req, res) => {
+  try {
+    const shipmentId = req.params.shipmentId;
+    const [rows] = await db.query(
+      `SELECT shipment_identifier, qr_token, qr_expires_at FROM shipments WHERE id = ?`,
+      [shipmentId]
+    );
+    if (!rows.length)
+      return res.status(404).json({ msg: "Shipment not found" });
+    const row = rows[0];
+    if (row.qr_expires_at && new Date(row.qr_expires_at) < new Date()) {
+      return res.status(410).json({ msg: "QR expired" });
+    }
+    const payload = JSON.stringify({
+      shipment_id: shipmentId,
+      shipment_identifier: row.shipment_identifier,
+      qr_token: row.qr_token,
+    });
+    const dataUrl = await generateQrDataUrl(payload);
+    return res.json({ qr: dataUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to generate QR" });
+  }
+};
 exports.getShipmentCounts = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -481,11 +588,21 @@ exports.markDelivered = async (req, res) => {
         .status(404)
         .json({ msg: "Shipment not found or not assigned to you" });
 
-    await db.query("UPDATE shipments SET status = 'delivered' WHERE id = ?", [
-      shipmentId,
-    ]);
-
-    res.status(200).json({ msg: "Shipment marked as delivered" });
+    // Move to awaiting_confirmation and return QR to display to recipient
+    await db.query(
+      "UPDATE shipments SET status = 'awaiting_confirmation' WHERE id = ?",
+      [shipmentId]
+    );
+    const [qrRow] = await db.query(
+      `SELECT qr_token, qr_expires_at FROM shipments WHERE id = ?`,
+      [shipmentId]
+    );
+    const qrPayload = JSON.stringify({
+      shipment_id: shipmentId,
+      qr_token: qrRow[0].qr_token,
+    });
+    const qr = await generateQrDataUrl(qrPayload);
+    res.status(200).json({ msg: "Awaiting recipient confirmation", qr });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to update shipment status" });

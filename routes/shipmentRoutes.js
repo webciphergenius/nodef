@@ -58,4 +58,17 @@ router.post(
   controller.markDelivered
 );
 
+// QR & confirmation
+router.get("/:shipmentId/qr", authenticateUser, controller.getShipmentQr);
+router.post(
+  "/:shipmentId/confirm-mobile",
+  authenticateUser,
+  controller.confirmRecipientMobile
+);
+router.post(
+  "/:shipmentId/confirm-otp",
+  authenticateUser,
+  controller.confirmRecipientOtp
+);
+
 module.exports = router;
