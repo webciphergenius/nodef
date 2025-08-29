@@ -5,6 +5,17 @@ const {
   sendNotification,
   generateQrDataUrl,
 } = require("../services/notificationService");
+let hasQrExpiresAtColumn = null;
+let hasQrTokenColumn = null;
+async function ensureShipmentColumns() {
+  if (hasQrExpiresAtColumn !== null && hasQrTokenColumn !== null) return;
+  const [rows] = await db.query(
+    `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shipments' AND COLUMN_NAME IN ('qr_expires_at','qr_token')`
+  );
+  const names = new Set(rows.map((r) => r.COLUMN_NAME));
+  hasQrExpiresAtColumn = names.has("qr_expires_at");
+  hasQrTokenColumn = names.has("qr_token");
+}
 exports.createShipment = async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer "))
@@ -50,6 +61,7 @@ exports.createShipment = async (req, res) => {
   const shipment_images = req.files?.map((f) => `/uploads/${f.filename}`) || [];
 
   try {
+    await ensureShipmentColumns();
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -74,37 +86,59 @@ exports.createShipment = async (req, res) => {
     // Insert shipment (without shipment_identifier yet). Create qr_token now.
     const qr_token = require("crypto").randomBytes(16).toString("hex");
     const qr_expires_at = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
-    const [result] = await db.query(
-      `INSERT INTO shipments (
-        shipper_id, vehicle_type, pickup_zip, pickup_location_name,
-        pickup_lat, pickup_lng, dropoff_zip, dropoff_location_name,
-        dropoff_lat, dropoff_lng, recipient_mobile, package_instructions, shipment_images,
-        service_level, declared_value, terms_acknowledged, 
-        stripe_payment_id, payment_status, qr_token, qr_expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        shipper_id,
-        vehicle_type,
-        pickup_zip,
-        pickup_location_name,
-        pickup_lat,
-        pickup_lng,
-        dropoff_zip,
-        dropoff_location_name,
-        dropoff_lat,
-        dropoff_lng,
-        recipient_mobile,
-        package_instructions,
-        JSON.stringify(shipment_images),
-        service_level,
-        declared_value,
-        terms_acknowledged,
-        session.id,
-        "paid",
-        qr_token,
-        qr_expires_at,
-      ]
-    );
+    const columns = [
+      "shipper_id",
+      "vehicle_type",
+      "pickup_zip",
+      "pickup_location_name",
+      "pickup_lat",
+      "pickup_lng",
+      "dropoff_zip",
+      "dropoff_location_name",
+      "dropoff_lat",
+      "dropoff_lng",
+      "recipient_mobile",
+      "package_instructions",
+      "shipment_images",
+      "service_level",
+      "declared_value",
+      "terms_acknowledged",
+      "stripe_payment_id",
+      "payment_status",
+    ];
+    const values = [
+      shipper_id,
+      vehicle_type,
+      pickup_zip,
+      pickup_location_name,
+      pickup_lat,
+      pickup_lng,
+      dropoff_zip,
+      dropoff_location_name,
+      dropoff_lat,
+      dropoff_lng,
+      recipient_mobile,
+      package_instructions,
+      JSON.stringify(shipment_images),
+      service_level,
+      declared_value,
+      terms_acknowledged,
+      session.id,
+      "paid",
+    ];
+    if (hasQrTokenColumn) {
+      columns.push("qr_token");
+      values.push(qr_token);
+    }
+    if (hasQrExpiresAtColumn) {
+      columns.push("qr_expires_at");
+      values.push(qr_expires_at);
+    }
+    const placeholders = columns.map(() => "?").join(", ");
+    const sql = `INSERT INTO shipments (${columns.join(
+      ", "
+    )}) VALUES (${placeholders})`;
+    const [result] = await db.query(sql, values);
 
     const shipmentId = result.insertId;
     const dateStr = new Date().toISOString().split("T")[0].replace(/-/g, "");
