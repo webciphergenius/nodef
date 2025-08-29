@@ -17,29 +17,46 @@ const createPaymentsTable = async () => {
 };
 
 const alterShipmentsForQrAndMobile = async () => {
-  // Add recipient_mobile if missing
-  await db
-    .query(
-      `ALTER TABLE shipments 
-     ADD COLUMN IF NOT EXISTS recipient_mobile VARCHAR(20) NOT NULL AFTER dropoff_lng`
-    )
-    .catch(() => {});
+  const columnExists = async (table, column) => {
+    const [rows] = await db.query(
+      `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+      [table, column]
+    );
+    return rows.length > 0;
+  };
 
-  // Add qr_token for confirmation flow
-  await db
-    .query(
-      `ALTER TABLE shipments 
-     ADD COLUMN IF NOT EXISTS qr_token VARCHAR(64) NULL AFTER shipment_images`
-    )
-    .catch(() => {});
+  try {
+    if (!(await columnExists("shipments", "recipient_mobile"))) {
+      await db.query(
+        `ALTER TABLE shipments ADD COLUMN recipient_mobile VARCHAR(20) NOT NULL AFTER dropoff_lng`
+      );
+      console.log("DB: Added shipments.recipient_mobile");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding shipments.recipient_mobile:", e.message);
+  }
 
-  // Optional expiry for QR token
-  await db
-    .query(
-      `ALTER TABLE shipments 
-     ADD COLUMN IF NOT EXISTS qr_expires_at DATETIME NULL AFTER qr_token`
-    )
-    .catch(() => {});
+  try {
+    if (!(await columnExists("shipments", "qr_token"))) {
+      await db.query(
+        `ALTER TABLE shipments ADD COLUMN qr_token VARCHAR(64) NULL AFTER shipment_images`
+      );
+      console.log("DB: Added shipments.qr_token");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding shipments.qr_token:", e.message);
+  }
+
+  try {
+    if (!(await columnExists("shipments", "qr_expires_at"))) {
+      await db.query(
+        `ALTER TABLE shipments ADD COLUMN qr_expires_at DATETIME NULL AFTER qr_token`
+      );
+      console.log("DB: Added shipments.qr_expires_at");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding shipments.qr_expires_at:", e.message);
+  }
 };
 
 createPaymentsTable();
