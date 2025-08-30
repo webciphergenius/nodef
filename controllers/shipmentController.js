@@ -5,6 +5,7 @@ const {
   sendNotification,
   generateQrDataUrl,
 } = require("../services/notificationService");
+const crypto = require("crypto");
 let hasQrExpiresAtColumn = null;
 let hasQrTokenColumn = null;
 async function ensureShipmentColumns() {
@@ -345,6 +346,7 @@ exports.listAcceptedShipments = async (req, res) => {
       dropoff_location_name: row.dropoff_location_name,
       dropoff_lat: row.dropoff_lat,
       dropoff_lng: row.dropoff_lng,
+      recipient_mobile: row.recipient_mobile,
       package_instructions: row.package_instructions,
       service_level: row.service_level,
       declared_value: row.declared_value,
@@ -418,18 +420,51 @@ exports.getLatestLocation = async (req, res) => {
 // Recipient enters mobile to confirm delivery (or trigger OTP)
 exports.confirmRecipientMobile = async (req, res) => {
   try {
-    const { shipmentId } = req.params;
-    const { mobile } = req.body;
+    const { mobile, qrData } = req.body;
     if (!mobile) return res.status(400).json({ msg: "Mobile is required" });
+    if (!qrData) return res.status(400).json({ msg: "QR data is required" });
+
+    // Verify QR signature and extract shipment info
+    const [payloadStr, signature] = qrData.split(".");
+    if (!signature) return res.status(400).json({ msg: "Invalid QR format" });
+
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.JWT_SECRET)
+      .update(payloadStr)
+      .digest("hex")
+      .substring(0, 8);
+    if (signature !== expectedSignature) {
+      return res.status(400).json({ msg: "QR signature verification failed" });
+    }
+
+    const payload = JSON.parse(payloadStr);
+    const shipmentId = payload.s;
+    const qrToken = payload.t;
+    const timestamp = payload.ts;
+
+    // Check if QR is expired (24 hours)
+    if (Date.now() - timestamp > 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ msg: "QR code has expired" });
+    }
 
     const [rows] = await db.query(
-      `SELECT recipient_mobile FROM shipments WHERE id = ?`,
+      `SELECT recipient_mobile, qr_token, status FROM shipments WHERE id = ?`,
       [shipmentId]
     );
     if (!rows.length)
       return res.status(404).json({ msg: "Shipment not found" });
 
-    const expected = rows[0].recipient_mobile;
+    const shipment = rows[0];
+    if (shipment.status !== "awaiting_confirmation") {
+      return res
+        .status(400)
+        .json({ msg: "Shipment not awaiting confirmation" });
+    }
+    if (shipment.qr_token !== qrToken) {
+      return res.status(400).json({ msg: "Invalid QR token" });
+    }
+
+    const expected = shipment.recipient_mobile;
     if (
       expected &&
       expected.replace(/\D/g, "") === String(mobile).replace(/\D/g, "")
@@ -459,19 +494,52 @@ exports.confirmRecipientMobile = async (req, res) => {
 // Recipient submits OTP to confirm delivery
 exports.confirmRecipientOtp = async (req, res) => {
   try {
-    const { shipmentId } = req.params;
-    const { otp } = req.body;
+    const { otp, qrData } = req.body;
     if (!otp) return res.status(400).json({ msg: "OTP is required" });
+    if (!qrData) return res.status(400).json({ msg: "QR data is required" });
+
+    // Verify QR signature and extract shipment info
+    const [payloadStr, signature] = qrData.split(".");
+    if (!signature) return res.status(400).json({ msg: "Invalid QR format" });
+
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.JWT_SECRET)
+      .update(payloadStr)
+      .digest("hex")
+      .substring(0, 8);
+    if (signature !== expectedSignature) {
+      return res.status(400).json({ msg: "QR signature verification failed" });
+    }
+
+    const payload = JSON.parse(payloadStr);
+    const shipmentId = payload.s;
+    const qrToken = payload.t;
+    const timestamp = payload.ts;
+
+    // Check if QR is expired (24 hours)
+    if (Date.now() - timestamp > 24 * 60 * 60 * 1000) {
+      return res.status(400).json({ msg: "QR code has expired" });
+    }
 
     const [rows] = await db.query(
-      `SELECT recipient_mobile FROM shipments WHERE id = ?`,
+      `SELECT recipient_mobile, qr_token, status FROM shipments WHERE id = ?`,
       [shipmentId]
     );
     if (!rows.length)
       return res.status(404).json({ msg: "Shipment not found" });
 
+    const shipment = rows[0];
+    if (shipment.status !== "awaiting_confirmation") {
+      return res
+        .status(400)
+        .json({ msg: "Shipment not awaiting confirmation" });
+    }
+    if (shipment.qr_token !== qrToken) {
+      return res.status(400).json({ msg: "Invalid QR token" });
+    }
+
     const { verifyOTP } = require("../services/otpService");
-    const ok = await verifyOTP(rows[0].recipient_mobile, otp);
+    const ok = await verifyOTP(shipment.recipient_mobile, otp);
     if (!ok) return res.status(400).json({ msg: "Invalid or expired OTP" });
 
     await db.query(`UPDATE shipments SET status = 'delivered' WHERE id = ?`, [
@@ -631,10 +699,21 @@ exports.markDelivered = async (req, res) => {
       `SELECT qr_token, qr_expires_at FROM shipments WHERE id = ?`,
       [shipmentId]
     );
-    const qrPayload = JSON.stringify({
-      shipment_id: shipmentId,
-      qr_token: qrRow[0].qr_token,
-    });
+
+    // Create signed QR payload for security
+    const payload = {
+      s: shipmentId, // shipment_id
+      t: qrRow[0].qr_token, // token
+      ts: Date.now(), // timestamp
+    };
+    const payloadStr = JSON.stringify(payload);
+    const signature = crypto
+      .createHmac("sha256", process.env.JWT_SECRET)
+      .update(payloadStr)
+      .digest("hex")
+      .substring(0, 8);
+    const qrPayload = payloadStr + "." + signature;
+
     const qr = await generateQrDataUrl(qrPayload);
     res.status(200).json({ msg: "Awaiting recipient confirmation", qr });
   } catch (err) {
