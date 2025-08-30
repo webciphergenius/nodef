@@ -690,34 +690,128 @@ exports.markDelivered = async (req, res) => {
         .status(404)
         .json({ msg: "Shipment not found or not assigned to you" });
 
-    // Move to awaiting_confirmation and return QR to display to recipient
+    const shipment = rows[0];
+
+    // Send OTP to recipient
+    const { generateAndSendOTP } = require("../services/otpService");
+    await generateAndSendOTP(shipment.recipient_mobile);
+
+    // Move to awaiting_confirmation
     await db.query(
       "UPDATE shipments SET status = 'awaiting_confirmation' WHERE id = ?",
       [shipmentId]
     );
-    const [qrRow] = await db.query(
-      `SELECT qr_token, qr_expires_at FROM shipments WHERE id = ?`,
-      [shipmentId]
-    );
 
-    // Create signed QR payload for security
-    const payload = {
-      s: shipmentId, // shipment_id
-      t: qrRow[0].qr_token, // token
-      ts: Date.now(), // timestamp
-    };
-    const payloadStr = JSON.stringify(payload);
-    const signature = crypto
-      .createHmac("sha256", process.env.JWT_SECRET)
-      .update(payloadStr)
-      .digest("hex")
-      .substring(0, 8);
-    const qrPayload = payloadStr + "." + signature;
-
+    // Generate QR code that opens web page for recipient
+    const qrPayload = `${
+      process.env.DOMAIN || "http://localhost:3000"
+    }/delivery-confirm?shipment_id=${shipmentId}&token=${shipment.qr_token}`;
     const qr = await generateQrDataUrl(qrPayload);
-    res.status(200).json({ msg: "Awaiting recipient confirmation", qr });
+
+    res.status(200).json({
+      msg: "OTP sent to recipient. Awaiting confirmation.",
+      qr,
+      recipient_mobile: shipment.recipient_mobile,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Failed to update shipment status" });
+  }
+};
+
+// Driver manually verifies OTP (for when recipient tells driver the OTP)
+exports.confirmDriverOtp = async (req, res) => {
+  try {
+    const { shipmentId } = req.params;
+    const { otp } = req.body;
+    const driverId = req.user.id;
+
+    if (!otp) return res.status(400).json({ msg: "OTP is required" });
+
+    // Verify driver owns this shipment
+    const [rows] = await db.query(
+      "SELECT recipient_mobile, status FROM shipments WHERE id = ? AND driver_id = ?",
+      [shipmentId, driverId]
+    );
+
+    if (!rows.length)
+      return res.status(404).json({ msg: "Shipment not found" });
+
+    const shipment = rows[0];
+    if (shipment.status !== "awaiting_confirmation") {
+      return res
+        .status(400)
+        .json({ msg: "Shipment not awaiting confirmation" });
+    }
+
+    // Verify OTP
+    const { verifyOTP } = require("../services/otpService");
+    const ok = await verifyOTP(shipment.recipient_mobile, otp);
+    if (!ok) return res.status(400).json({ msg: "Invalid or expired OTP" });
+
+    // Mark as delivered
+    await db.query(`UPDATE shipments SET status = 'delivered' WHERE id = ?`, [
+      shipmentId,
+    ]);
+
+    return res.json({
+      msg: "Delivery confirmed by driver OTP",
+      delivered: true,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to verify OTP" });
+  }
+};
+
+// Recipient confirms via web page (QR code opens this)
+exports.confirmRecipientWeb = async (req, res) => {
+  try {
+    const { shipmentId, token } = req.query;
+    const { otp } = req.body;
+
+    if (!shipmentId || !token) {
+      return res.status(400).json({ msg: "Invalid confirmation link" });
+    }
+
+    if (!otp) return res.status(400).json({ msg: "OTP is required" });
+
+    // Verify shipment and token
+    const [rows] = await db.query(
+      `SELECT recipient_mobile, qr_token, status FROM shipments WHERE id = ?`,
+      [shipmentId]
+    );
+
+    if (!rows.length)
+      return res.status(404).json({ msg: "Shipment not found" });
+
+    const shipment = rows[0];
+    if (shipment.status !== "awaiting_confirmation") {
+      return res
+        .status(400)
+        .json({ msg: "Shipment not awaiting confirmation" });
+    }
+
+    if (shipment.qr_token !== token) {
+      return res.status(400).json({ msg: "Invalid confirmation token" });
+    }
+
+    // Verify OTP
+    const { verifyOTP } = require("../services/otpService");
+    const ok = await verifyOTP(shipment.recipient_mobile, otp);
+    if (!ok) return res.status(400).json({ msg: "Invalid or expired OTP" });
+
+    // Mark as delivered
+    await db.query(`UPDATE shipments SET status = 'delivered' WHERE id = ?`, [
+      shipmentId,
+    ]);
+
+    return res.json({
+      msg: "Delivery confirmed successfully",
+      delivered: true,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to verify OTP" });
   }
 };

@@ -60,15 +60,20 @@ router.post(
 
 // QR & confirmation
 router.get("/:shipmentId/qr", authenticateUser, controller.getShipmentQr);
+
+// Driver manually verifies OTP (when recipient tells driver the OTP)
 router.post(
-  "/:shipmentId/confirm-mobile",
+  "/:shipmentId/confirm-driver-otp",
   authenticateUser,
-  controller.confirmRecipientMobile
+  controller.confirmDriverOtp
 );
-router.post(
-  "/:shipmentId/confirm-otp",
-  authenticateUser,
-  controller.confirmRecipientOtp
-);
+
+// Recipient confirms via web page (QR code opens this) - no auth required
+router.post("/confirm-recipient-web", controller.confirmRecipientWeb);
+
+// Delivery confirmation page (QR code opens this)
+router.get("/delivery-confirm", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "delivery-confirm.html"));
+});
 
 module.exports = router;
