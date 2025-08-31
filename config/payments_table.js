@@ -57,6 +57,16 @@ const alterShipmentsForQrAndMobile = async () => {
   } catch (e) {
     console.error("DB: Failed adding shipments.qr_expires_at:", e.message);
   }
+
+  // Fix status column size to accommodate new status values
+  try {
+    await db.query(
+      `ALTER TABLE shipments MODIFY COLUMN status VARCHAR(50) NOT NULL DEFAULT 'pending'`
+    );
+    console.log("DB: Updated shipments.status column size");
+  } catch (e) {
+    console.error("DB: Failed updating shipments.status column:", e.message);
+  }
 };
 
 createPaymentsTable();
