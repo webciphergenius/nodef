@@ -767,10 +767,9 @@ exports.confirmDriverOtp = async (req, res) => {
 // Recipient confirms via web page (QR code opens this)
 exports.confirmRecipientWeb = async (req, res) => {
   try {
-    const { shipmentId, token } = req.query;
-    const { otp } = req.body;
+    const { shipment_id, token, otp } = req.body;
 
-    if (!shipmentId || !token) {
+    if (!shipment_id || !token) {
       return res.status(400).json({ msg: "Invalid confirmation link" });
     }
 
@@ -779,7 +778,7 @@ exports.confirmRecipientWeb = async (req, res) => {
     // Verify shipment and token
     const [rows] = await db.query(
       `SELECT recipient_mobile, qr_token, status FROM shipments WHERE id = ?`,
-      [shipmentId]
+      [shipment_id]
     );
 
     if (!rows.length)
@@ -803,7 +802,7 @@ exports.confirmRecipientWeb = async (req, res) => {
 
     // Mark as delivered
     await db.query(`UPDATE shipments SET status = 'delivered' WHERE id = ?`, [
-      shipmentId,
+      shipment_id,
     ]);
 
     return res.json({
