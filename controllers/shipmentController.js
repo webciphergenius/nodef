@@ -314,7 +314,7 @@ exports.listAcceptedShipments = async (req, res) => {
         FROM shipments s
         JOIN users d ON s.driver_id = d.id
         JOIN users ship ON s.shipper_id = ship.id
-        WHERE s.driver_id = ? AND s.status IN ('accepted', 'picked_up', 'in_transit')
+        WHERE s.driver_id = ? AND s.status IN ('accepted', 'picked_up', 'in_transit', 'awaiting_confirmation')
       `;
       params = [userId];
     } else if (userRole === "shipper") {
@@ -325,7 +325,7 @@ exports.listAcceptedShipments = async (req, res) => {
         FROM shipments s
         JOIN users d ON s.driver_id = d.id
         JOIN users ship ON s.shipper_id = ship.id
-        WHERE s.shipper_id = ? AND s.driver_id IS NOT NULL AND s.status IN ('accepted', 'picked_up', 'in_transit')
+        WHERE s.shipper_id = ? AND s.driver_id IS NOT NULL AND s.status IN ('accepted', 'picked_up', 'in_transit', 'awaiting_confirmation')
       `;
       params = [userId];
     } else {

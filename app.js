@@ -24,6 +24,11 @@ if (!fs.existsSync(uploadsDir)) {
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/public", express.static(path.join(__dirname, "public")));
 
+// Delivery confirmation page (QR code opens this)
+app.get("/delivery-confirm", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "delivery-confirm.html"));
+});
+
 const allowedOrigins = ["http://localhost:8000", "http://127.0.0.1:8000"];
 
 // CORS for /api

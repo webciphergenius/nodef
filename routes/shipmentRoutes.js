@@ -71,9 +71,4 @@ router.post(
 // Recipient confirms via web page (QR code opens this) - no auth required
 router.post("/confirm-recipient-web", controller.confirmRecipientWeb);
 
-// Delivery confirmation page (QR code opens this)
-router.get("/delivery-confirm", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "public", "delivery-confirm.html"));
-});
-
 module.exports = router;
