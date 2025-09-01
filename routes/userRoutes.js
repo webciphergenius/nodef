@@ -4,24 +4,23 @@ const controller = require("../controllers/userController");
 const multer = require("multer");
 const path = require("path");
 const { authenticateUser } = require("../services/authService");
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.resolve(process.cwd(), "uploads")); // ensure uploads folder exists
+    cb(null, path.resolve(process.cwd(), "uploads"));
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext);
-    cb(null, `${Date.now()}-${base}${ext}`);
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // max file size: 10 MB
-    fields: 50, // max number of non-file fields
-    fieldSize: 10 * 1024 * 1024, // max size of each text field value (10 MB)
-    fieldNameSize: 200, // max field name length in bytes
+    fileSize: 10 * 1024 * 1024, // 10 MB per file
+    fieldSize: 10 * 1024 * 1024, // 10 MB max per text field (default was 1 MB)
+    fields: 50, // number of text fields allowed
+    fieldNameSize: 200, // bytes for field name
   },
 });
 
