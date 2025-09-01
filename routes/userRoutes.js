@@ -9,7 +9,15 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // max file size: 10 MB
+    fields: 50, // max number of non-file fields
+    fieldSize: 10 * 1024 * 1024, // max size of each text field value (10 MB)
+    fieldNameSize: 200, // max field name length in bytes
+  },
+});
 
 router.post(
   "/register",
@@ -35,7 +43,11 @@ router.put(
 router.post("/forgot-password", controller.forgotPassword);
 router.post("/reset-password", controller.resetPassword);
 
-router.get("/shipper/payments", authenticateUser, controller.getShipperPayments);
+router.get(
+  "/shipper/payments",
+  authenticateUser,
+  controller.getShipperPayments
+);
 
 router.get("/driver/payments", authenticateUser, controller.getDriverPayments);
 
