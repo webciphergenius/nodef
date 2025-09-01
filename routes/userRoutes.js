@@ -5,8 +5,14 @@ const multer = require("multer");
 const path = require("path");
 const { authenticateUser } = require("../services/authService");
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+  destination: (req, file, cb) => {
+    cb(null, path.resolve(process.cwd(), "uploads")); // ensure uploads folder exists
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path.basename(file.originalname, ext);
+    cb(null, `${Date.now()}-${base}${ext}`);
+  },
 });
 
 const upload = multer({
