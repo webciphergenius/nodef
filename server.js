@@ -59,9 +59,24 @@ io.on("connection", (socket) => {
 
       const receiverRoom = String(receiverId);
       const senderRoom = String(senderId);
-      const receiverCount =
-        io.sockets.adapter.rooms.get(receiverRoom)?.size || 0;
-      const senderCount = io.sockets.adapter.rooms.get(senderRoom)?.size || 0;
+
+      // Get room info for debugging
+      const receiverRoomInfo = io.sockets.adapter.rooms.get(receiverRoom);
+      const senderRoomInfo = io.sockets.adapter.rooms.get(senderRoom);
+      const receiverCount = receiverRoomInfo?.size || 0;
+      const senderCount = senderRoomInfo?.size || 0;
+
+      console.log("[socket] room_info", {
+        receiverRoom,
+        senderRoom,
+        receiverRoomExists: !!receiverRoomInfo,
+        senderRoomExists: !!senderRoomInfo,
+        receiverCount,
+        senderCount,
+        allRooms: Array.from(io.sockets.adapter.rooms.keys()),
+        userSockets,
+        socketUser,
+      });
 
       // Broadcast to BOTH sender and receiver rooms (multi-device-safe)
       io.to([receiverRoom, senderRoom]).emit("private_message", {
@@ -89,6 +104,18 @@ io.on("connection", (socket) => {
         ...meta,
       });
       if (typeof ack === "function") ack({ ok: false, error: err.message });
+    }
+  });
+
+  // Add a test endpoint to verify socket is working
+  socket.on("ping", (callback) => {
+    console.log("[socket] ping received from", socket.id);
+    if (typeof callback === "function") {
+      callback({
+        pong: true,
+        socketId: socket.id,
+        timestamp: new Date().toISOString(),
+      });
     }
   });
 
