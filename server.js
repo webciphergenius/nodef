@@ -13,6 +13,7 @@ const io = socketio(server, {
 });
 
 const userSockets = {}; // Track connected users (last seen socketId)
+const socketUser = {}; // Track socketId -> userId
 
 io.on("connection", (socket) => {
   console.log("[socket] connected", {
@@ -23,9 +24,10 @@ io.on("connection", (socket) => {
   socket.on("join", (userId) => {
     const room = String(userId);
     userSockets[userId] = socket.id;
-    socket.join(room); // Join personal room (supports multi-device)
+    socketUser[socket.id] = room;
+    socket.join(room); // Join personal room
     console.log("[socket] join", {
-      userId,
+      userId: room,
       room,
       socketId: socket.id,
       rooms: Array.from(socket.rooms || []),
@@ -33,7 +35,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("private_message", async (payload, ack) => {
-    const { senderId, receiverId, message, shipmentId } = payload || {};
+    let { senderId, receiverId, message, shipmentId } = payload || {};
+    // Derive senderId from join if missing
+    if (!senderId) senderId = socketUser[socket.id];
     const meta = {
       senderId,
       receiverId,
@@ -41,14 +45,36 @@ io.on("connection", (socket) => {
       socketId: socket.id,
       ts: new Date().toISOString(),
     };
+
+    // Validate inputs
+    if (!senderId || !receiverId) {
+      const error = "senderId and receiverId are required";
+      console.warn("[socket] private_message:bad_payload", { ...meta, error });
+      if (typeof ack === "function") return ack({ ok: false, error });
+      return;
+    }
+    if (!message || String(message).trim().length === 0) {
+      const error = "message is required";
+      console.warn("[socket] private_message:bad_payload", { ...meta, error });
+      if (typeof ack === "function") return ack({ ok: false, error });
+      return;
+    }
+
+    // Normalize types
+    senderId = String(senderId);
+    receiverId = String(receiverId);
+    shipmentId = shipmentId == null ? null : String(shipmentId);
+
     console.log("[socket] private_message:received", {
       ...meta,
+      senderId,
+      receiverId,
       messageLength: (message || "").length,
     });
     try {
       const [result] = await db.query(
         "INSERT INTO messages (sender_id, receiver_id, shipment_id, message) VALUES (?, ?, ?, ?)",
-        [senderId, receiverId, shipmentId || null, message]
+        [senderId, receiverId, shipmentId, message]
       );
       console.log("[socket] private_message:saved", {
         insertId: result.insertId,
@@ -147,6 +173,7 @@ io.on("connection", (socket) => {
         break;
       }
     }
+    delete socketUser[socket.id];
   });
 });
 
