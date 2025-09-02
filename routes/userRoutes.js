@@ -17,10 +17,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB per file
-    fieldSize: 10 * 1024 * 1024, // 10 MB max per text field (default was 1 MB)
-    fields: 50, // number of text fields allowed
-    fieldNameSize: 200, // bytes for field name
+    fileSize: 20 * 1024 * 1024, // 20 MB per file
+    fieldSize: 20 * 1024 * 1024, // 20 MB per text field
+    fields: 100,
+    fieldNameSize: 200,
   },
 });
 

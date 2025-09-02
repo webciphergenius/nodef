@@ -131,10 +131,27 @@ exports.resendOtp = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-  const { phone, password } = req.body;
+  const { phone, password, type } = req.body;
   try {
+    // Validate requested type
+    if (!type || !["driver", "shipper"].includes(String(type).toLowerCase())) {
+      return res
+        .status(400)
+        .json({ msg: "Valid type required: driver or shipper" });
+    }
+
     const result = await loginUser("users", phone, password);
     if (!result) return res.status(401).json({ msg: "Login failed" });
+
+    // Enforce role match
+    const requestedType = String(type).toLowerCase();
+    const actualRole = String(result.user.role || "").toLowerCase();
+    if (requestedType !== actualRole) {
+      return res.status(403).json({
+        msg: "Role mismatch: account is registered as a different type",
+      });
+    }
+
     res.status(200).json({
       msg: "Login successful",
       token: result.token,
