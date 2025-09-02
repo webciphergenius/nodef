@@ -56,10 +56,13 @@ io.on("connection", (socket) => {
       });
 
       const receiverRoom = String(receiverId);
-      const delivered = io.sockets.adapter.rooms.get(receiverRoom)?.size || 0;
+      const senderRoom = String(senderId);
+      const receiverCount =
+        io.sockets.adapter.rooms.get(receiverRoom)?.size || 0;
+      const senderCount = io.sockets.adapter.rooms.get(senderRoom)?.size || 0;
 
-      // Emit to receiver room (all devices)
-      io.to(receiverRoom).emit("private_message", {
+      // Broadcast to BOTH sender and receiver rooms (multi-device-safe)
+      io.to([receiverRoom, senderRoom]).emit("private_message", {
         id: result.insertId,
         senderId,
         receiverId,
@@ -68,24 +71,14 @@ io.on("connection", (socket) => {
         created_at: new Date().toISOString(),
       });
       console.log("[socket] private_message:emitted", {
-        toRoom: receiverRoom,
-        deliveredCount: delivered,
+        toRooms: [receiverRoom, senderRoom],
+        receiverCount,
+        senderCount,
         ...meta,
       });
 
-      // Echo to sender for immediate UI update
-      socket.emit("private_message", {
-        id: result.insertId,
-        senderId,
-        receiverId,
-        message,
-        shipmentId,
-        created_at: new Date().toISOString(),
-        self: true,
-      });
-
       if (typeof ack === "function") {
-        ack({ ok: true, id: result.insertId, deliveredCount: delivered });
+        ack({ ok: true, id: result.insertId, receiverCount, senderCount });
       }
     } catch (err) {
       console.error("[socket] private_message:error", {
