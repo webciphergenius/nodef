@@ -67,6 +67,40 @@ const alterShipmentsForQrAndMobile = async () => {
   } catch (e) {
     console.error("DB: Failed updating shipments.status column:", e.message);
   }
+
+  // Add address fields to users table
+  try {
+    if (!(await columnExists("users", "city"))) {
+      await db.query(
+        `ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL AFTER address`
+      );
+      console.log("DB: Added users.city");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding users.city:", e.message);
+  }
+
+  try {
+    if (!(await columnExists("users", "state"))) {
+      await db.query(
+        `ALTER TABLE users ADD COLUMN state VARCHAR(100) NULL AFTER city`
+      );
+      console.log("DB: Added users.state");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding users.state:", e.message);
+  }
+
+  try {
+    if (!(await columnExists("users", "apartment"))) {
+      await db.query(
+        `ALTER TABLE users ADD COLUMN apartment VARCHAR(100) NULL AFTER state`
+      );
+      console.log("DB: Added users.apartment");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding users.apartment:", e.message);
+  }
 };
 
 createPaymentsTable();

@@ -22,6 +22,9 @@ exports.registerUser = async (req, res) => {
     zipcode,
     country,
     address,
+    city,
+    state,
+    apartment,
     username,
     password,
     confirm_password,
@@ -65,11 +68,11 @@ exports.registerUser = async (req, res) => {
 
     await db.query(
       `INSERT INTO users (
-      role, first_name, last_name, phone, email, zipcode, country, address,
+      role, first_name, last_name, phone, email, zipcode, country, address, city, state, apartment,
       username, password, company,
       vehicle_type, vehicle_number, load_capacity,
       license_file, insurance_file, registration_file
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         role,
         first_name,
@@ -79,6 +82,9 @@ exports.registerUser = async (req, res) => {
         zipcode,
         country,
         address,
+        city || null,
+        state || null,
+        apartment || null,
         username,
         hash,
         company || null,
@@ -131,31 +137,16 @@ exports.resendOtp = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-  const { phone, password, type } = req.body;
+  const { phone, password } = req.body;
   try {
-    // Validate requested type
-    if (!type || !["driver", "shipper"].includes(String(type).toLowerCase())) {
-      return res
-        .status(400)
-        .json({ msg: "Valid type required: driver or shipper" });
-    }
-
     const result = await loginUser("users", phone, password);
     if (!result) return res.status(401).json({ msg: "Login failed" });
-
-    // Enforce role match
-    const requestedType = String(type).toLowerCase();
-    const actualRole = String(result.user.role || "").toLowerCase();
-    if (requestedType !== actualRole) {
-      return res.status(403).json({
-        msg: "Role mismatch: account is registered as a different type",
-      });
-    }
 
     res.status(200).json({
       msg: "Login successful",
       token: result.token,
       user: result.user,
+      userType: result.user.role, // Return role for frontend to determine type
     });
   } catch (err) {
     console.error(err);
@@ -210,6 +201,9 @@ exports.updateUserProfile = async (req, res) => {
       company,
       zipcode,
       address,
+      city,
+      state,
+      apartment,
       vehicle_type,
       vehicle_number,
       load_capacity,
@@ -220,7 +214,7 @@ exports.updateUserProfile = async (req, res) => {
 
     let query = `
       UPDATE users 
-      SET first_name = ?, last_name = ?, email = ?, company = ?, zipcode = ?, address = ?, vehicle_type = ?, vehicle_number = ?, load_capacity = ?, country = ?
+      SET first_name = ?, last_name = ?, email = ?, company = ?, zipcode = ?, address = ?, city = ?, state = ?, apartment = ?, vehicle_type = ?, vehicle_number = ?, load_capacity = ?, country = ?
     `;
     const params = [
       first_name,
@@ -229,6 +223,9 @@ exports.updateUserProfile = async (req, res) => {
       company,
       zipcode,
       address,
+      city,
+      state,
+      apartment,
       vehicle_type,
       vehicle_number,
       load_capacity,
