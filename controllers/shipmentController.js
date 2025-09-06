@@ -619,7 +619,18 @@ exports.getDriverDashboardStats = async (req, res) => {
       [driverId]
     );
 
-    res.status(200).json(stats);
+    // Get total earnings from payments table
+    const [[earnings]] = await db.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total_earnings
+       FROM payments
+       WHERE driver_id = ?`,
+      [driverId]
+    );
+
+    res.status(200).json({
+      ...stats,
+      total_earnings: parseFloat(earnings.total_earnings),
+    });
   } catch (err) {
     console.error("Driver dashboard stats error:", err);
     res.status(500).json({ msg: "Failed to load dashboard stats" });
