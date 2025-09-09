@@ -2,6 +2,7 @@ const app = require("./app");
 const http = require("http");
 const socketio = require("socket.io");
 const db = require("./config/db"); // Needed for saving messages
+const { sendChatNotification } = require("./services/pushNotificationService");
 require("dotenv").config();
 
 const server = http.createServer(app);
@@ -93,6 +94,41 @@ io.on("connection", (socket) => {
         senderCount,
         ...meta,
       });
+
+      // Send push notification to receiver if they're not online
+      if (receiverCount === 0) {
+        try {
+          // Get receiver's device token and sender's name
+          const [receiverData] = await db.query(
+            "SELECT device_token FROM users WHERE id = ?",
+            [receiverId]
+          );
+          const [senderData] = await db.query(
+            "SELECT first_name, last_name FROM users WHERE id = ?",
+            [senderId]
+          );
+
+          if (receiverData.length > 0 && receiverData[0].device_token) {
+            const senderName =
+              senderData.length > 0
+                ? `${senderData[0].first_name} ${senderData[0].last_name}`.trim()
+                : "Someone";
+
+            await sendChatNotification(
+              receiverData[0].device_token,
+              senderName,
+              message,
+              shipmentId
+            );
+            console.log(
+              "[socket] push notification sent to receiver",
+              receiverId
+            );
+          }
+        } catch (pushError) {
+          console.error("[socket] push notification error:", pushError);
+        }
+      }
 
       if (typeof ack === "function") {
         ack({ ok: true, id: result.insertId, receiverCount, senderCount });

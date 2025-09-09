@@ -801,11 +801,9 @@ exports.confirmRecipientWeb = async (req, res) => {
         .status(400)
         .json({ msg: "Shipment not awaiting confirmation" });
     }
-
     if (shipment.qr_token !== token) {
       return res.status(400).json({ msg: "Invalid confirmation token" });
     }
-
     // Verify OTP
     const { verifyOTP } = require("../services/otpService");
     const ok = await verifyOTP(shipment.recipient_mobile, otp);

@@ -137,10 +137,18 @@ exports.resendOtp = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-  const { phone, password } = req.body;
+  const { phone, password, device_token } = req.body;
   try {
     const result = await loginUser("users", phone, password);
     if (!result) return res.status(401).json({ msg: "Login failed" });
+
+    // Update device token if provided
+    if (device_token) {
+      await db.query("UPDATE users SET device_token = ? WHERE id = ?", [
+        device_token,
+        result.user.id,
+      ]);
+    }
 
     res.status(200).json({
       msg: "Login successful",

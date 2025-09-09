@@ -101,6 +101,18 @@ const alterShipmentsForQrAndMobile = async () => {
   } catch (e) {
     console.error("DB: Failed adding users.apartment:", e.message);
   }
+
+  // Add device_token for push notifications
+  try {
+    if (!(await columnExists("users", "device_token"))) {
+      await db.query(
+        `ALTER TABLE users ADD COLUMN device_token VARCHAR(255) NULL AFTER apartment`
+      );
+      console.log("DB: Added users.device_token");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding users.device_token:", e.message);
+  }
 };
 
 createPaymentsTable();
