@@ -113,6 +113,43 @@ const alterShipmentsForQrAndMobile = async () => {
   } catch (e) {
     console.error("DB: Failed adding users.device_token:", e.message);
   }
+
+  // Add cancellation fields to shipments table
+  try {
+    if (!(await columnExists("shipments", "cancellation_reason"))) {
+      await db.query(
+        `ALTER TABLE shipments ADD COLUMN cancellation_reason TEXT NULL AFTER qr_expires_at`
+      );
+      console.log("DB: Added shipments.cancellation_reason");
+    }
+  } catch (e) {
+    console.error(
+      "DB: Failed adding shipments.cancellation_reason:",
+      e.message
+    );
+  }
+
+  try {
+    if (!(await columnExists("shipments", "cancelled_by"))) {
+      await db.query(
+        `ALTER TABLE shipments ADD COLUMN cancelled_by INT NULL AFTER cancellation_reason`
+      );
+      console.log("DB: Added shipments.cancelled_by");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding shipments.cancelled_by:", e.message);
+  }
+
+  try {
+    if (!(await columnExists("shipments", "cancelled_at"))) {
+      await db.query(
+        `ALTER TABLE shipments ADD COLUMN cancelled_at DATETIME NULL AFTER cancelled_by`
+      );
+      console.log("DB: Added shipments.cancelled_at");
+    }
+  } catch (e) {
+    console.error("DB: Failed adding shipments.cancelled_at:", e.message);
+  }
 };
 
 createPaymentsTable();

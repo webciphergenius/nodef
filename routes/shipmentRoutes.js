@@ -71,4 +71,17 @@ router.post(
 // Recipient confirms via web page (QR code opens this) - no auth required
 router.post("/confirm-recipient-web", controller.confirmRecipientWeb);
 
+// Shipment cancellation endpoints
+router.post(
+  "/cancel-by-shipper/:shipmentId",
+  authenticateUser,
+  controller.cancelShipmentByShipper
+);
+
+router.post(
+  "/cancel-by-driver/:shipmentId",
+  authenticateUser,
+  controller.cancelShipmentByDriver
+);
+
 module.exports = router;

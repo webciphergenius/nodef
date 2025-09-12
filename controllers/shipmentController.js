@@ -823,3 +823,139 @@ exports.confirmRecipientWeb = async (req, res) => {
     res.status(500).json({ msg: "Failed to verify OTP" });
   }
 };
+
+// Shipper cancels a shipment
+exports.cancelShipmentByShipper = async (req, res) => {
+  try {
+    const shipmentId = req.params.shipmentId;
+    const shipperId = req.user.id;
+    const { reason } = req.body;
+
+    // Check if shipment exists and belongs to the shipper
+    const [rows] = await db.query(
+      "SELECT * FROM shipments WHERE id = ? AND shipper_id = ?",
+      [shipmentId, shipperId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({
+        msg: "Shipment not found or you don't have permission to cancel it",
+      });
+    }
+
+    const shipment = rows[0];
+
+    // Check if shipment can be cancelled (not already delivered or cancelled)
+    if (shipment.status === "delivered") {
+      return res.status(400).json({
+        msg: "Cannot cancel a delivered shipment",
+      });
+    }
+
+    if (shipment.status === "cancelled") {
+      return res.status(400).json({
+        msg: "Shipment is already cancelled",
+      });
+    }
+
+    // Update shipment status to cancelled
+    await db.query(
+      `UPDATE shipments 
+       SET status = 'cancelled', 
+           cancellation_reason = ?, 
+           cancelled_by = ?, 
+           cancelled_at = NOW() 
+       WHERE id = ?`,
+      [reason || "Cancelled by shipper", shipperId, shipmentId]
+    );
+
+    // If there was a driver assigned, remove the assignment
+    if (shipment.driver_id) {
+      await db.query("UPDATE shipments SET driver_id = NULL WHERE id = ?", [
+        shipmentId,
+      ]);
+    }
+
+    // Send notification to driver if they were assigned
+    if (shipment.driver_id) {
+      const { sendNotification } = require("../services/notificationService");
+      await sendNotification(
+        shipment.driver_id,
+        `Shipment ${shipment.shipment_identifier} has been cancelled by the shipper.`
+      );
+    }
+
+    res.status(200).json({
+      msg: "Shipment cancelled successfully",
+      shipment_id: shipmentId,
+      status: "cancelled",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to cancel shipment" });
+  }
+};
+
+// Driver cancels a shipment
+exports.cancelShipmentByDriver = async (req, res) => {
+  try {
+    const shipmentId = req.params.shipmentId;
+    const driverId = req.user.id;
+    const { reason } = req.body;
+
+    // Check if shipment exists and is assigned to the driver
+    const [rows] = await db.query(
+      "SELECT * FROM shipments WHERE id = ? AND driver_id = ?",
+      [shipmentId, driverId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({
+        msg: "Shipment not found or not assigned to you",
+      });
+    }
+
+    const shipment = rows[0];
+
+    // Check if shipment can be cancelled
+    if (shipment.status === "delivered") {
+      return res.status(400).json({
+        msg: "Cannot cancel a delivered shipment",
+      });
+    }
+
+    if (shipment.status === "cancelled") {
+      return res.status(400).json({
+        msg: "Shipment is already cancelled",
+      });
+    }
+
+    // Update shipment status to cancelled and remove driver assignment
+    await db.query(
+      `UPDATE shipments 
+       SET status = 'cancelled', 
+           cancellation_reason = ?, 
+           cancelled_by = ?, 
+           cancelled_at = NOW(),
+           driver_id = NULL 
+       WHERE id = ?`,
+      [reason || "Cancelled by driver", driverId, shipmentId]
+    );
+
+    // Send notification to shipper
+    const { sendNotification } = require("../services/notificationService");
+    await sendNotification(
+      shipment.shipper_id,
+      `Shipment ${shipment.shipment_identifier} has been cancelled by the driver. It will be made available for other drivers.`
+    );
+
+    res.status(200).json({
+      msg: "Shipment cancelled successfully. It has been made available for other drivers.",
+      shipment_id: shipmentId,
+      status: "cancelled",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Failed to cancel shipment" });
+  }
+};

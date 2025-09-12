@@ -45,6 +45,9 @@ Creates a new user account for either a "shipper" or a "driver".
 | `zipcode`           | String | No       | User's zip code                                 |
 | `country`           | String | No       | User's country                                  |
 | `address`           | String | No       | User's address                                  |
+| `city`              | String | No       | User's city                                     |
+| `state`             | String | No       | User's state/province                           |
+| `apartment`         | String | No       | User's apartment/unit number                    |
 | `company`           | String | No       | Shipper's company name (for shippers)           |
 | `vehicle_type`      | String | No       | Driver's vehicle type (for drivers)             |
 | `vehicle_number`    | String | No       | Driver's vehicle number (for drivers)           |
@@ -231,7 +234,55 @@ Endpoints for creating and managing shipments.
 - **Method:** `POST`
 - **Authentication:** Required (Driver role)
 
-### 6. Get Dashboard Stats
+### 6. Cancel Shipment
+
+#### Shipper Cancellation
+
+- **Endpoint:** `POST /api/shipment/cancel-by-shipper/:shipmentId`
+- **Method:** `POST`
+- **Authentication:** Required (Shipper role)
+- **Request Body:**
+
+```json
+{
+  "reason": "Change of plans" // Optional
+}
+```
+
+- **Success Response (200):**
+
+```json
+{
+  "msg": "Shipment cancelled successfully",
+  "shipment_id": 123,
+  "status": "cancelled"
+}
+```
+
+#### Driver Cancellation
+
+- **Endpoint:** `POST /api/shipment/cancel-by-driver/:shipmentId`
+- **Method:** `POST`
+- **Authentication:** Required (Driver role)
+- **Request Body:**
+
+```json
+{
+  "reason": "Vehicle breakdown" // Optional
+}
+```
+
+- **Success Response (200):**
+
+```json
+{
+  "msg": "Shipment cancelled successfully. It has been made available for other drivers.",
+  "shipment_id": 123,
+  "status": "cancelled"
+}
+```
+
+### 7. Get Dashboard Stats
 
 - `GET /api/shipment/counts`: (Shipper) Returns counts of total, in-transit, completed, and pending shipments.
 - `GET /api/shipment/driver/dashboard`: (Driver) Returns counts of total, completed, and in-transit shipments.
