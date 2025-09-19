@@ -15,6 +15,8 @@ router.get("/logout", adminController.logout);
 router.get("/dashboard", ensureAdmin, adminController.getDashboard);
 router.get("/shippers", ensureAdmin, adminController.listShippers);
 router.get("/drivers", ensureAdmin, adminController.listDrivers);
+router.get("/transactions", ensureAdmin, adminController.getTransactions);
+router.get("/earnings", ensureAdmin, adminController.getEarnings);
 router.post("/user/:id/block", ensureAdmin, adminController.blockUser);
 router.post("/user/:id/unblock", ensureAdmin, adminController.unblockUser);
 router.post("/user/:id/delete", ensureAdmin, adminController.deleteUser);

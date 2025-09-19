@@ -8,6 +8,10 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"
+    />
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -16,21 +20,302 @@
         <div class="collapse navbar-collapse">
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
-              <a class="nav-link" href="/admin/shippers">Shippers</a>
+              <a class="nav-link" href="/admin/dashboard">
+                <i class="bi bi-speedometer2"></i> Dashboard
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/admin/drivers">Drivers</a>
+              <a class="nav-link" href="/admin/shippers">
+                <i class="bi bi-people"></i> Shippers
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="/admin/logout">Logout</a>
+              <a class="nav-link" href="/admin/drivers">
+                <i class="bi bi-truck"></i> Drivers
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/transactions">
+                <i class="bi bi-credit-card"></i> Transactions
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/earnings">
+                <i class="bi bi-graph-up"></i> Earnings
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/logout">
+                <i class="bi bi-box-arrow-right"></i> Logout
+              </a>
             </li>
           </ul>
         </div>
       </div>
     </nav>
-    <div class="container mt-4">
-      <h1>Welcome, <%= admin.username %>!</h1>
-      <p>Use the navigation above to manage shippers and drivers.</p>
+
+    <div class="container-fluid mt-4">
+      <div class="row">
+        <div class="col-12">
+          <h1 class="mb-4">
+            <i class="bi bi-speedometer2"></i> Welcome, <%= admin.username %>!
+          </h1>
+        </div>
+      </div>
+
+      <% if (stats) { %>
+      <!-- Statistics Cards -->
+      <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h4 class="card-title"><%= stats.totalUsers %></h4>
+                  <p class="card-text">Total Users</p>
+                </div>
+                <div class="align-self-center">
+                  <i class="bi bi-people fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+          <div class="card bg-success text-white">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h4 class="card-title"><%= stats.totalShipments %></h4>
+                  <p class="card-text">Total Shipments</p>
+                </div>
+                <div class="align-self-center">
+                  <i class="bi bi-box fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+          <div class="card bg-warning text-white">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h4 class="card-title"><%= stats.activeShipments %></h4>
+                  <p class="card-text">Active Shipments</p>
+                </div>
+                <div class="align-self-center">
+                  <i class="bi bi-arrow-clockwise fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+          <div class="card bg-info text-white">
+            <div class="card-body">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <h4 class="card-title">
+                    $<%= stats.totalRevenue.toFixed(2) %>
+                  </h4>
+                  <p class="card-text">Total Revenue</p>
+                </div>
+                <div class="align-self-center">
+                  <i class="bi bi-currency-dollar fs-1"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Statistics -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="bi bi-bar-chart"></i> User Breakdown</h5>
+            </div>
+            <div class="card-body">
+              <div class="row text-center">
+                <div class="col-6">
+                  <h3 class="text-primary"><%= stats.totalShippers %></h3>
+                  <p>Shippers</p>
+                </div>
+                <div class="col-6">
+                  <h3 class="text-success"><%= stats.totalDrivers %></h3>
+                  <p>Drivers</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="bi bi-truck"></i> Shipment Status</h5>
+            </div>
+            <div class="card-body">
+              <div class="row text-center">
+                <div class="col-6">
+                  <h3 class="text-warning"><%= stats.activeShipments %></h3>
+                  <p>Active</p>
+                </div>
+                <div class="col-6">
+                  <h3 class="text-success"><%= stats.completedShipments %></h3>
+                  <p>Completed</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5><i class="bi bi-clock-history"></i> Recent Transactions</h5>
+              <a
+                href="/admin/transactions"
+                class="btn btn-sm btn-outline-primary"
+                >View All</a
+              >
+            </div>
+            <div class="card-body">
+              <% if (stats.recentTransactions && stats.recentTransactions.length
+              > 0) { %>
+              <div class="table-responsive">
+                <table class="table table-striped">
+                  <thead>
+                    <tr>
+                      <th>Transaction ID</th>
+                      <th>Shipment</th>
+                      <th>Shipper</th>
+                      <th>Driver</th>
+                      <th>Amount</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% stats.recentTransactions.slice(0, 5).forEach(transaction
+                    => { %>
+                    <tr>
+                      <td>#<%= transaction.id %></td>
+                      <td><%= transaction.shipment_identifier || 'N/A' %></td>
+                      <td>
+                        <%= transaction.shipper_name %> <%=
+                        transaction.shipper_lastname %>
+                      </td>
+                      <td>
+                        <%= transaction.driver_name ? transaction.driver_name +
+                        ' ' + transaction.driver_lastname : 'Unassigned' %>
+                      </td>
+                      <td>$<%= parseFloat(transaction.amount).toFixed(2) %></td>
+                      <td>
+                        <%= new
+                        Date(transaction.created_at).toLocaleDateString() %>
+                      </td>
+                    </tr>
+                    <% }); %>
+                  </tbody>
+                </table>
+              </div>
+              <% } else { %>
+              <p class="text-muted">No recent transactions found.</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Performers -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="bi bi-trophy"></i> Top Drivers by Earnings</h5>
+            </div>
+            <div class="card-body">
+              <% if (stats.topDrivers && stats.topDrivers.length > 0) { %> <%
+              stats.topDrivers.forEach((driver, index) => { %>
+              <div
+                class="d-flex justify-content-between align-items-center mb-2"
+              >
+                <div>
+                  <strong
+                    ><%= index + 1 %>. <%= driver.first_name %> <%=
+                    driver.last_name %></strong
+                  >
+                  <br />
+                  <small class="text-muted"
+                    ><%= driver.total_shipments %> shipments</small
+                  >
+                </div>
+                <div class="text-end">
+                  <strong
+                    >$<%= parseFloat(driver.total_earnings).toFixed(2)
+                    %></strong
+                  >
+                </div>
+              </div>
+              <% }); %> <% } else { %>
+              <p class="text-muted">No driver earnings data available.</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header">
+              <h5><i class="bi bi-star"></i> Top Shippers by Spending</h5>
+            </div>
+            <div class="card-body">
+              <% if (stats.topShippers && stats.topShippers.length > 0) { %> <%
+              stats.topShippers.forEach((shipper, index) => { %>
+              <div
+                class="d-flex justify-content-between align-items-center mb-2"
+              >
+                <div>
+                  <strong
+                    ><%= index + 1 %>. <%= shipper.first_name %> <%=
+                    shipper.last_name %></strong
+                  >
+                  <br />
+                  <small class="text-muted"
+                    ><%= shipper.total_shipments %> shipments</small
+                  >
+                </div>
+                <div class="text-end">
+                  <strong
+                    >$<%= parseFloat(shipper.total_spent).toFixed(2) %></strong
+                  >
+                </div>
+              </div>
+              <% }); %> <% } else { %>
+              <p class="text-muted">No shipper spending data available.</p>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle"></i> Failed to load dashboard
+        statistics. Please try again.
+      </div>
+      <% } %>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
