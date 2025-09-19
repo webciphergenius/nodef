@@ -80,8 +80,9 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      secure: false, // Set to false for now to fix admin login issues
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true, // Prevent XSS attacks
     },
     // Note: Using memory store for simplicity
     // In production with multiple instances, consider using Redis or database session store

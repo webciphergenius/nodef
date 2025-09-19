@@ -7,21 +7,49 @@ exports.getLogin = (req, res) => {
 };
 
 exports.postLogin = async (req, res) => {
-  const { username, password } = req.body;
-  const [rows] = await db.query("SELECT * FROM admins WHERE username = ?", [
-    username,
-  ]);
-  if (!rows.length) {
-    return res.render("admin-login", { error: "Invalid username or password" });
+  try {
+    const { username, password } = req.body;
+    console.log("🔐 Admin login attempt:", {
+      username,
+      hasPassword: !!password,
+    });
+
+    const [rows] = await db.query("SELECT * FROM admins WHERE username = ?", [
+      username,
+    ]);
+
+    if (!rows.length) {
+      console.log("❌ Admin user not found:", username);
+      return res.render("admin-login", {
+        error: "Invalid username or password",
+      });
+    }
+
+    const admin = rows[0];
+    const match = await bcrypt.compare(password, admin.password);
+
+    if (!match) {
+      console.log("❌ Password mismatch for admin:", username);
+      return res.render("admin-login", {
+        error: "Invalid username or password",
+      });
+    }
+
+    // Set session data
+    req.session.adminId = admin.id;
+    req.session.adminUsername = admin.username;
+
+    console.log("✅ Admin login successful:", {
+      id: admin.id,
+      username: admin.username,
+      sessionId: req.sessionID,
+    });
+
+    res.redirect("/admin/dashboard");
+  } catch (error) {
+    console.error("❌ Admin login error:", error);
+    res.render("admin-login", { error: "Login failed. Please try again." });
   }
-  const admin = rows[0];
-  const match = await bcrypt.compare(password, admin.password);
-  if (!match) {
-    return res.render("admin-login", { error: "Invalid username or password" });
-  }
-  req.session.adminId = admin.id;
-  req.session.adminUsername = admin.username;
-  res.redirect("/admin/dashboard");
 };
 
 exports.logout = (req, res) => {
