@@ -69,7 +69,21 @@ To find your account ID:
 1. Go to Cloudflare dashboard
 2. Look at the right sidebar - your Account ID is displayed there
 
-### 4. Set Environment Variables
+### 4. Find Your Account ID
+
+To get your account ID:
+
+1. **From R2 Dashboard**
+
+   - Go to your R2 bucket
+   - Look at the URL: `https://dash.cloudflare.com/your-account-id/r2/object-storage`
+   - The account ID is in the URL
+
+2. **From Public Development URL**
+   - If you have a working public URL like `https://pub-baf47774aaf6422cbee72d298e959246.r2.dev`
+   - Your account ID is: `baf47774aaf6422cbee72d298e959246`
+
+### 5. Set Environment Variables
 
 Add these environment variables to your production environment:
 
@@ -79,6 +93,7 @@ CLOUDFLARE_R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 CLOUDFLARE_R2_ACCESS_KEY_ID=your-access-key-id
 CLOUDFLARE_R2_SECRET_ACCESS_KEY=your-secret-access-key
 CLOUDFLARE_R2_BUCKET_NAME=your-bucket-name
+CLOUDFLARE_R2_ACCOUNT_ID=your-account-id
 
 # Optional: Custom domain (recommended)
 CLOUDFLARE_R2_CUSTOM_DOMAIN=https://uploads.yourdomain.com

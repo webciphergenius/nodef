@@ -34,6 +34,35 @@ const BUCKET_NAME = process.env.CLOUDFLARE_R2_BUCKET_NAME;
 const CUSTOM_DOMAIN = process.env.CLOUDFLARE_R2_CUSTOM_DOMAIN; // Optional: your custom domain
 
 /**
+ * Get file URL from key
+ * @param {string} key - File key in bucket
+ * @returns {string} File URL
+ */
+const getFileUrl = (key) => {
+  if (!key) return null;
+
+  // If key already contains full URL, return as is
+  if (key.startsWith("http")) {
+    return key;
+  }
+
+  // Use custom domain if available
+  if (CUSTOM_DOMAIN) {
+    return `${CUSTOM_DOMAIN}/${key}`;
+  }
+
+  // Use the public development URL format for R2
+  // Format: https://pub-{account-id}.r2.dev/{bucket-name}/{key}
+  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID;
+  if (accountId) {
+    return `https://pub-${accountId}.r2.dev/${BUCKET_NAME}/${key}`;
+  }
+
+  // Fallback to direct R2 URL (may not work if bucket is private)
+  return `https://${BUCKET_NAME}.r2.cloudflarestorage.com/${key}`;
+};
+
+/**
  * Upload file to Cloudflare R2
  * @param {Object} file - Multer file object
  * @param {string} folder - Folder path in bucket (optional)
@@ -85,8 +114,8 @@ const uploadToR2 = async (file, folder = "") => {
     const result = await upload.done();
     console.log("Upload successful:", result.Location);
 
-    // Return URL - use custom domain if available, otherwise use R2 URL
-    const fileUrl = CUSTOM_DOMAIN ? `${CUSTOM_DOMAIN}/${key}` : result.Location;
+    // Use our getFileUrl function to generate the correct URL format
+    const fileUrl = getFileUrl(key);
 
     return {
       success: true,
@@ -139,35 +168,6 @@ const deleteFromR2 = async (key) => {
       error: error.message,
     };
   }
-};
-
-/**
- * Get file URL from key
- * @param {string} key - File key in bucket
- * @returns {string} File URL
- */
-const getFileUrl = (key) => {
-  if (!key) return null;
-
-  // If key already contains full URL, return as is
-  if (key.startsWith("http")) {
-    return key;
-  }
-
-  // Use custom domain if available
-  if (CUSTOM_DOMAIN) {
-    return `${CUSTOM_DOMAIN}/${key}`;
-  }
-
-  // Use the public development URL format for R2
-  // Format: https://pub-{account-id}.r2.dev/{bucket-name}/{key}
-  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID;
-  if (accountId) {
-    return `https://pub-${accountId}.r2.dev/${BUCKET_NAME}/${key}`;
-  }
-
-  // Fallback to direct R2 URL (may not work if bucket is private)
-  return `https://${BUCKET_NAME}.r2.cloudflarestorage.com/${key}`;
 };
 
 /**
