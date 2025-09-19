@@ -15,13 +15,16 @@ const stripeConnectController = require("./controllers/stripeConnectController")
 require("./config/payments_table");
 
 const fs = require("fs");
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
+const { getStaticPath } = require("./utils/uploadConfig");
+
+// Get the static file serving path (null for R2, local path for local storage)
+const uploadsDir = getStaticPath();
 
 // ---------- STATIC ----------
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+if (uploadsDir) {
+  // Only serve static files if using local storage
+  app.use("/uploads", express.static(uploadsDir));
+}
 app.use("/public", express.static(path.join(__dirname, "public")));
 
 // Delivery confirmation page (QR code opens this)

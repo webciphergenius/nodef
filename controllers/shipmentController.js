@@ -6,6 +6,7 @@ const {
   generateQrDataUrl,
 } = require("../services/notificationService");
 const crypto = require("crypto");
+const { uploadFile } = require("../utils/uploadConfig");
 let hasQrExpiresAtColumn = null;
 let hasQrTokenColumn = null;
 async function ensureShipmentColumns() {
@@ -59,7 +60,20 @@ exports.createShipment = async (req, res) => {
     return res.status(400).json({ msg: "Missing required shipment fields" });
   }
 
-  const shipment_images = req.files?.map((f) => `/uploads/${f.filename}`) || [];
+  // Handle shipment image uploads (R2 or local)
+  let shipment_images = [];
+
+  if (req.files && req.files.length > 0) {
+    try {
+      for (const file of req.files) {
+        const result = await uploadFile(file, "shipment-images");
+        shipment_images.push(result.url);
+      }
+    } catch (uploadError) {
+      console.error("Shipment image upload error:", uploadError);
+      return res.status(500).json({ msg: "Image upload failed" });
+    }
+  }
 
   try {
     await ensureShipmentColumns();

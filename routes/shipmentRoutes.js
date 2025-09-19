@@ -4,11 +4,9 @@ const controller = require("../controllers/shipmentController");
 const multer = require("multer");
 const path = require("path");
 const { authenticateUser } = require("../services/authService");
+const { getMulterStorage } = require("../utils/uploadConfig");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-});
+const storage = getMulterStorage();
 const upload = multer({ storage });
 router.post(
   "/create",

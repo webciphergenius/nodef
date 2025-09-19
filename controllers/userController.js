@@ -11,6 +11,7 @@ const {
   logout,
   tokenBlacklist,
 } = require("../services/authService");
+const { uploadFile } = require("../utils/uploadConfig");
 
 exports.registerUser = async (req, res) => {
   const {
@@ -34,9 +35,37 @@ exports.registerUser = async (req, res) => {
     company,
   } = req.body;
 
-  const license_file = req.files?.license_file?.[0]?.filename;
-  const insurance_file = req.files?.insurance_file?.[0]?.filename;
-  const registration_file = req.files?.registration_file?.[0]?.filename;
+  // Handle file uploads (R2 or local)
+  let license_file = null;
+  let insurance_file = null;
+  let registration_file = null;
+
+  try {
+    if (req.files?.license_file?.[0]) {
+      const result = await uploadFile(
+        req.files.license_file[0],
+        "driver-documents"
+      );
+      license_file = result.filename;
+    }
+    if (req.files?.insurance_file?.[0]) {
+      const result = await uploadFile(
+        req.files.insurance_file[0],
+        "driver-documents"
+      );
+      insurance_file = result.filename;
+    }
+    if (req.files?.registration_file?.[0]) {
+      const result = await uploadFile(
+        req.files.registration_file[0],
+        "driver-documents"
+      );
+      registration_file = result.filename;
+    }
+  } catch (uploadError) {
+    console.error("File upload error:", uploadError);
+    return res.status(500).json({ msg: "File upload failed" });
+  }
 
   if (!role || !["shipper", "driver"].includes(role))
     return res
