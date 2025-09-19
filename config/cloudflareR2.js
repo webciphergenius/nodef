@@ -154,10 +154,20 @@ const getFileUrl = (key) => {
     return key;
   }
 
-  // Construct URL from key
-  return CUSTOM_DOMAIN
-    ? `${CUSTOM_DOMAIN}/${key}`
-    : `https://${BUCKET_NAME}.r2.cloudflarestorage.com/${key}`;
+  // Use custom domain if available
+  if (CUSTOM_DOMAIN) {
+    return `${CUSTOM_DOMAIN}/${key}`;
+  }
+
+  // Use the public development URL format for R2
+  // Format: https://pub-{account-id}.r2.dev/{bucket-name}/{key}
+  const accountId = process.env.CLOUDFLARE_R2_ACCOUNT_ID;
+  if (accountId) {
+    return `https://pub-${accountId}.r2.dev/${BUCKET_NAME}/${key}`;
+  }
+
+  // Fallback to direct R2 URL (may not work if bucket is private)
+  return `https://${BUCKET_NAME}.r2.cloudflarestorage.com/${key}`;
 };
 
 /**
