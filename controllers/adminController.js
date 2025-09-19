@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const bcrypt = require("bcryptjs");
+const { getFileUrlFromFilename } = require("../utils/uploadConfig");
 
 exports.getLogin = (req, res) => {
   res.render("admin-login", { error: null });
@@ -143,6 +144,14 @@ exports.listShippers = async (req, res) => {
   const [shippers] = await db.query(
     "SELECT * FROM users WHERE role = 'shipper'"
   );
+
+  // Convert file paths to proper URLs for each shipper
+  shippers.forEach((shipper) => {
+    if (shipper.profile_image) {
+      shipper.profile_image = getFileUrlFromFilename(shipper.profile_image);
+    }
+  });
+
   res.render("admin-shippers", {
     admin: { username: req.session.adminUsername },
     shippers,
@@ -151,6 +160,25 @@ exports.listShippers = async (req, res) => {
 
 exports.listDrivers = async (req, res) => {
   const [drivers] = await db.query("SELECT * FROM users WHERE role = 'driver'");
+
+  // Convert file paths to proper URLs for each driver
+  drivers.forEach((driver) => {
+    if (driver.profile_image) {
+      driver.profile_image = getFileUrlFromFilename(driver.profile_image);
+    }
+    if (driver.license_file) {
+      driver.license_file = getFileUrlFromFilename(driver.license_file);
+    }
+    if (driver.insurance_file) {
+      driver.insurance_file = getFileUrlFromFilename(driver.insurance_file);
+    }
+    if (driver.registration_file) {
+      driver.registration_file = getFileUrlFromFilename(
+        driver.registration_file
+      );
+    }
+  });
+
   res.render("admin-drivers", {
     admin: { username: req.session.adminUsername },
     drivers,

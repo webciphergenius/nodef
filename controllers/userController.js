@@ -11,7 +11,7 @@ const {
   logout,
   tokenBlacklist,
 } = require("../services/authService");
-const { uploadFile } = require("../utils/uploadConfig");
+const { uploadFile, getFileUrlFromFilename } = require("../utils/uploadConfig");
 
 exports.registerUser = async (req, res) => {
   const {
@@ -213,7 +213,24 @@ exports.getUserProfile = async (req, res) => {
       decoded.id,
     ]);
     if (!rows.length) return res.status(404).json({ msg: "User not found" });
-    res.status(200).json(rows[0]);
+
+    const user = rows[0];
+
+    // Convert file paths to proper URLs
+    if (user.profile_image) {
+      user.profile_image = getFileUrlFromFilename(user.profile_image);
+    }
+    if (user.license_file) {
+      user.license_file = getFileUrlFromFilename(user.license_file);
+    }
+    if (user.insurance_file) {
+      user.insurance_file = getFileUrlFromFilename(user.insurance_file);
+    }
+    if (user.registration_file) {
+      user.registration_file = getFileUrlFromFilename(user.registration_file);
+    }
+
+    res.status(200).json(user);
   } catch (err) {
     console.error(err);
     res.status(401).json({ msg: "Invalid or expired token" });
@@ -247,7 +264,18 @@ exports.updateUserProfile = async (req, res) => {
       country,
     } = req.body;
 
-    const profile_image = req.file ? `/uploads/${req.file.filename}` : null;
+    // Handle profile image upload (R2 or local)
+    let profile_image = null;
+
+    if (req.file) {
+      try {
+        const result = await uploadFile(req.file, "profile-images");
+        profile_image = result.url;
+      } catch (uploadError) {
+        console.error("Profile image upload error:", uploadError);
+        return res.status(500).json({ msg: "Profile image upload failed" });
+      }
+    }
 
     let query = `
       UPDATE users 
