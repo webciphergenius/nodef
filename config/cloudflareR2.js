@@ -1,12 +1,18 @@
-const AWS = require("aws-sdk");
+const {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} = require("@aws-sdk/client-s3");
+const { Upload } = require("@aws-sdk/lib-storage");
 
-// Configure AWS SDK for Cloudflare R2
-const r2 = new AWS.S3({
+// Configure AWS SDK v3 for Cloudflare R2
+const r2 = new S3Client({
   endpoint: process.env.CLOUDFLARE_R2_ENDPOINT, // e.g., https://your-account-id.r2.cloudflarestorage.com
-  accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
-  secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  credentials: {
+    accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
+  },
   region: "auto", // Cloudflare R2 uses 'auto' as region
-  signatureVersion: "v4",
 });
 
 const BUCKET_NAME = process.env.CLOUDFLARE_R2_BUCKET_NAME;
@@ -24,7 +30,7 @@ const uploadToR2 = async (file, folder = "") => {
       ? `${folder}/${Date.now()}-${file.originalname}`
       : `${Date.now()}-${file.originalname}`;
 
-    const params = {
+    const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: key,
       Body: file.buffer,
@@ -32,7 +38,13 @@ const uploadToR2 = async (file, folder = "") => {
       ACL: "public-read", // Make file publicly accessible
     };
 
-    const result = await r2.upload(params).promise();
+    // Use AWS SDK v3 Upload for better performance
+    const upload = new Upload({
+      client: r2,
+      params: uploadParams,
+    });
+
+    const result = await upload.done();
 
     // Return URL - use custom domain if available, otherwise use R2 URL
     const fileUrl = CUSTOM_DOMAIN ? `${CUSTOM_DOMAIN}/${key}` : result.Location;
@@ -64,7 +76,7 @@ const deleteFromR2 = async (key) => {
       Key: key,
     };
 
-    await r2.deleteObject(params).promise();
+    await r2.send(new DeleteObjectCommand(params));
 
     return {
       success: true,

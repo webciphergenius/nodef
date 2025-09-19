@@ -75,13 +75,31 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(
   session({
-    secret: "your-secret-key",
+    secret:
+      process.env.SESSION_SECRET || "your-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+    // Note: Using memory store for simplicity
+    // In production with multiple instances, consider using Redis or database session store
   })
 );
 
 // Admin after parsers
 app.use("/admin", adminRoutes);
+
+// Test endpoint for R2 configuration
+app.get("/api/test-r2", (req, res) => {
+  const { isR2Configured } = require("./utils/uploadConfig");
+  res.json({
+    r2Configured: isR2Configured(),
+    message: isR2Configured()
+      ? "Cloudflare R2 is configured and ready"
+      : "R2 not configured, using local storage",
+  });
+});
 
 module.exports = app;
