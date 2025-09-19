@@ -206,8 +206,8 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <% stats.recentTransactions.slice(0, 5).forEach(transaction
-                    => { %>
+                    <% stats.recentTransactions.slice(0,
+                    5).forEach(function(transaction) { %>
                     <tr>
                       <td>#<%= transaction.id %></td>
                       <td><%= transaction.shipment_identifier || 'N/A' %></td>
@@ -246,7 +246,7 @@
             </div>
             <div class="card-body">
               <% if (stats.topDrivers && stats.topDrivers.length > 0) { %> <%
-              stats.topDrivers.forEach((driver, index) => { %>
+              stats.topDrivers.forEach(function(driver, index) { %>
               <div
                 class="d-flex justify-content-between align-items-center mb-2"
               >
@@ -281,7 +281,7 @@
             </div>
             <div class="card-body">
               <% if (stats.topShippers && stats.topShippers.length > 0) { %> <%
-              stats.topShippers.forEach((shipper, index) => { %>
+              stats.topShippers.forEach(function(shipper, index) { %>
               <div
                 class="d-flex justify-content-between align-items-center mb-2"
               >
