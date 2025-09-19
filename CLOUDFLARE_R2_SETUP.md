@@ -21,10 +21,18 @@ This guide explains how to set up Cloudflare R2 for file storage in your applica
    - Navigate to "R2 Object Storage"
 
 2. **Create Bucket**
+
    - Click "Create bucket"
    - Choose a unique bucket name (e.g., `your-app-uploads`)
    - Select location (choose closest to your users)
    - Click "Create bucket"
+
+3. **Make Bucket Public**
+   - Go to your bucket settings
+   - Click on "Settings" tab
+   - Scroll down to "Public Access"
+   - Enable "Allow Access" for public access
+   - This allows files to be accessed via direct URLs
 
 ### 2. Create R2 API Token
 
@@ -192,13 +200,21 @@ Using Cloudflare R2 for file storage
    - Verify API token permissions
    - Ensure bucket exists
 
-2. **Files not accessible**
+2. **Files not accessible (Authorization Error)**
 
-   - Check custom domain DNS
-   - Verify bucket public access settings
-   - Test with direct R2 URL
+   - **Most Common**: Bucket is not set to public access
+   - Go to bucket Settings → Public Access → Enable "Allow Access"
+   - Check custom domain DNS if using custom domain
+   - Test with direct R2 URL first
+   - Verify API token has read permissions
 
-3. **Slow uploads**
+3. **"InvalidArgument - Authorization" Error**
+
+   - This means the bucket is private
+   - Enable public access in bucket settings
+   - Or use signed URLs for private files
+
+4. **Slow uploads**
    - Check file size limits
    - Verify network connection
    - Consider chunked uploads for large files

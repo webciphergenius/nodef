@@ -99,6 +99,13 @@ app.get("/api/test-r2", (req, res) => {
     message: isR2Configured()
       ? "Cloudflare R2 is configured and ready"
       : "R2 not configured, using local storage",
+    environment: {
+      endpoint: process.env.CLOUDFLARE_R2_ENDPOINT ? 'Set' : 'Missing',
+      accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ? 'Set' : 'Missing',
+      secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ? 'Set' : 'Missing',
+      bucketName: process.env.CLOUDFLARE_R2_BUCKET_NAME ? 'Set' : 'Missing',
+      customDomain: process.env.CLOUDFLARE_R2_CUSTOM_DOMAIN ? 'Set' : 'Missing'
+    }
   });
 });
 

@@ -5,6 +5,20 @@ const {
 } = require("@aws-sdk/client-s3");
 const { Upload } = require("@aws-sdk/lib-storage");
 
+// Debug R2 configuration
+console.log("R2 Configuration:");
+console.log("Endpoint:", process.env.CLOUDFLARE_R2_ENDPOINT);
+console.log(
+  "Access Key ID:",
+  process.env.CLOUDFLARE_R2_ACCESS_KEY_ID ? "Set" : "Missing"
+);
+console.log(
+  "Secret Access Key:",
+  process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY ? "Set" : "Missing"
+);
+console.log("Bucket Name:", process.env.CLOUDFLARE_R2_BUCKET_NAME);
+console.log("Custom Domain:", process.env.CLOUDFLARE_R2_CUSTOM_DOMAIN);
+
 // Configure AWS SDK v3 for Cloudflare R2
 const r2 = new S3Client({
   endpoint: process.env.CLOUDFLARE_R2_ENDPOINT, // e.g., https://your-account-id.r2.cloudflarestorage.com
@@ -13,6 +27,7 @@ const r2 = new S3Client({
     secretAccessKey: process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY,
   },
   region: "auto", // Cloudflare R2 uses 'auto' as region
+  forcePathStyle: true, // Important for R2 compatibility
 });
 
 const BUCKET_NAME = process.env.CLOUDFLARE_R2_BUCKET_NAME;
@@ -26,16 +41,39 @@ const CUSTOM_DOMAIN = process.env.CLOUDFLARE_R2_CUSTOM_DOMAIN; // Optional: your
  */
 const uploadToR2 = async (file, folder = "") => {
   try {
+    // Validate required environment variables
+    if (!BUCKET_NAME) {
+      throw new Error(
+        "CLOUDFLARE_R2_BUCKET_NAME environment variable is not set"
+      );
+    }
+    if (!process.env.CLOUDFLARE_R2_ENDPOINT) {
+      throw new Error("CLOUDFLARE_R2_ENDPOINT environment variable is not set");
+    }
+    if (!process.env.CLOUDFLARE_R2_ACCESS_KEY_ID) {
+      throw new Error(
+        "CLOUDFLARE_R2_ACCESS_KEY_ID environment variable is not set"
+      );
+    }
+    if (!process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY) {
+      throw new Error(
+        "CLOUDFLARE_R2_SECRET_ACCESS_KEY environment variable is not set"
+      );
+    }
+
     const key = folder
       ? `${folder}/${Date.now()}-${file.originalname}`
       : `${Date.now()}-${file.originalname}`;
+
+    console.log(`Uploading to R2: ${BUCKET_NAME}/${key}`);
 
     const uploadParams = {
       Bucket: BUCKET_NAME,
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: "public-read", // Make file publicly accessible
+      // Remove ACL as R2 doesn't support it the same way as S3
+      // Instead, we'll make the bucket public
     };
 
     // Use AWS SDK v3 Upload for better performance
@@ -45,6 +83,7 @@ const uploadToR2 = async (file, folder = "") => {
     });
 
     const result = await upload.done();
+    console.log("Upload successful:", result.Location);
 
     // Return URL - use custom domain if available, otherwise use R2 URL
     const fileUrl = CUSTOM_DOMAIN ? `${CUSTOM_DOMAIN}/${key}` : result.Location;
@@ -57,9 +96,20 @@ const uploadToR2 = async (file, folder = "") => {
     };
   } catch (error) {
     console.error("R2 upload error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      statusCode: error.$metadata?.httpStatusCode,
+      requestId: error.$metadata?.requestId,
+    });
     return {
       success: false,
       error: error.message,
+      details: {
+        code: error.code,
+        statusCode: error.$metadata?.httpStatusCode,
+        requestId: error.$metadata?.requestId,
+      },
     };
   }
 };
