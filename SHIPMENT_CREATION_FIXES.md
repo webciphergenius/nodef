@@ -12,6 +12,8 @@ sqlMessage: "Unknown column 'pickup_name' in 'field list'"
 
 ```
 MulterError: Unexpected field
+code: 'LIMIT_UNEXPECTED_FILE',
+field: 'shipment_images[]',
 ```
 
 ## ✅ **Solutions**

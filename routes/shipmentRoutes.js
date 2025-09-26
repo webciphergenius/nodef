@@ -19,14 +19,23 @@ const upload = multer({
 router.post(
   "/create",
   authenticateUser,
-  upload.array("shipment_images"),
+  upload.fields([
+    { name: "shipment_images", maxCount: 10 },
+    { name: "shipment_images[]", maxCount: 10 },
+  ]),
   (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
       console.error("Multer Error:", err);
+      if (err.code === "LIMIT_UNEXPECTED_FILE") {
+        console.error("Unexpected field:", err.field);
+        return res.status(400).json({
+          msg: `Unexpected field: ${err.field}. Expected 'shipment_images' or 'shipment_images[]' for file uploads.`,
+        });
+      }
       if (err.code === "UNEXPECTED_FIELD") {
         console.error("Unexpected field:", err.field);
         return res.status(400).json({
-          msg: `Unexpected field: ${err.field}. Expected only 'shipment_images' for file uploads.`,
+          msg: `Unexpected field: ${err.field}. Expected 'shipment_images' or 'shipment_images[]' for file uploads.`,
         });
       }
       return res.status(400).json({ msg: "File upload error: " + err.message });

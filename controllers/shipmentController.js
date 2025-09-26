@@ -65,9 +65,13 @@ exports.createShipment = async (req, res) => {
   // Handle shipment image uploads (R2 or local)
   let shipment_images = [];
 
-  if (req.files && req.files.length > 0) {
+  if (req.files) {
     try {
-      for (const file of req.files) {
+      // Handle both field formats: shipment_images and shipment_images[]
+      const files =
+        req.files.shipment_images || req.files["shipment_images[]"] || [];
+
+      for (const file of files) {
         const result = await uploadFile(file, "shipment-images");
         shipment_images.push(result.url);
       }
