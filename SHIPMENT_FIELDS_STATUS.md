@@ -111,7 +111,7 @@ shipment_images: [file1.jpg, file2.jpg, file3.jpg]  // ✅ MULTIPLE FILES
 
 **Both requested features are already fully implemented in the code:**
 
-1. ✅ **Location Name Fields**: `pickup_location_name` and `dropoff_location_name` are fully integrated (optional fields)
+1. ✅ **Location Name Fields**: `pickup_location_name`, `pickup_name`, `dropoff_location_name`, and `dropoff_name` are fully integrated (all optional fields)
 2. ✅ **Multiple Image Upload**: `shipment_images` supports multiple file uploads
 
 **Only remaining task**: Run the database migration script in production to add the new columns to the shipments table.

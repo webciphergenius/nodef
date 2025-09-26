@@ -7,11 +7,32 @@ const { authenticateUser } = require("../services/authService");
 const { getMulterStorage } = require("../utils/uploadConfig");
 
 const storage = getMulterStorage();
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 20 * 1024 * 1024, // 20 MB per file
+    fieldSize: 20 * 1024 * 1024, // 20 MB per text field
+    fields: 100,
+    fieldNameSize: 200,
+  },
+});
 router.post(
   "/create",
   authenticateUser,
   upload.array("shipment_images"),
+  (err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+      console.error("Multer Error:", err);
+      if (err.code === "UNEXPECTED_FIELD") {
+        console.error("Unexpected field:", err.field);
+        return res.status(400).json({
+          msg: `Unexpected field: ${err.field}. Expected only 'shipment_images' for file uploads.`,
+        });
+      }
+      return res.status(400).json({ msg: "File upload error: " + err.message });
+    }
+    next(err);
+  },
   controller.createShipment
 );
 router.get("/available", authenticateUser, controller.listAvailableShipments);
