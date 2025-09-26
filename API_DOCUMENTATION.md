@@ -182,11 +182,13 @@ Endpoints for creating and managing shipments.
 | ----------------------- | ------- | -------- | ------------------------------------- |
 | `vehicle_type`          | String  | Yes      | e.g., "Van", "Truck"                  |
 | `pickup_zip`            | String  | Yes      |                                       |
-| `pickup_location_name`  | String  | Yes      |                                       |
+| `pickup_location_name`  | String  | No       |                                       |
+| `pickup_name`           | String  | No       |                                       |
 | `pickup_lat`            | String  | Yes      |                                       |
 | `pickup_lng`            | String  | Yes      |                                       |
 | `dropoff_zip`           | String  | Yes      |                                       |
-| `dropoff_location_name` | String  | Yes      |                                       |
+| `dropoff_location_name` | String  | No       |                                       |
+| `dropoff_name`          | String  | No       |                                       |
 | `dropoff_lat`           | String  | Yes      |                                       |
 | `dropoff_lng`           | String  | Yes      |                                       |
 | `service_level`         | String  | Yes      | e.g., "Standard", "Express"           |
