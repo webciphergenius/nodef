@@ -1,6 +1,7 @@
 # Admin Login Troubleshooting Guide
 
 ## Problem
+
 Admin login redirects back to login screen instead of accessing the dashboard.
 
 ## Solutions
@@ -14,6 +15,7 @@ node create-admin.js
 ```
 
 **Default credentials:**
+
 - Username: `admin`
 - Password: `admin123`
 
@@ -41,15 +43,18 @@ SESSION_SECRET=your-secret-key-change-in-production
 ### 4. Debugging Steps
 
 1. **Check Server Logs**
+
    - Look for admin login attempts in the console
    - Check for session-related errors
 
 2. **Test Admin Creation**
+
    ```bash
    node create-admin.js
    ```
 
 3. **Check Database**
+
    ```sql
    SELECT * FROM admins;
    ```
@@ -62,18 +67,22 @@ SESSION_SECRET=your-secret-key-change-in-production
 ### 5. Common Issues & Fixes
 
 #### Issue: "Invalid username or password"
+
 - **Cause**: No admin user exists
 - **Fix**: Run `node create-admin.js`
 
 #### Issue: Session not persisting
+
 - **Cause**: Session configuration issues
 - **Fix**: Check `secure: false` in session config
 
 #### Issue: Redirect loop
+
 - **Cause**: Session middleware not working
 - **Fix**: Check session middleware order in app.js
 
 #### Issue: Database connection errors
+
 - **Cause**: Database configuration issues
 - **Fix**: Check database credentials in .env
 
@@ -82,11 +91,13 @@ SESSION_SECRET=your-secret-key-change-in-production
 For production environments:
 
 1. **Set secure session secret:**
+
    ```bash
    SESSION_SECRET=your-very-secure-random-string
    ```
 
 2. **Consider using Redis for sessions:**
+
    ```bash
    npm install connect-redis redis
    ```

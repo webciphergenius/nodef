@@ -8,14 +8,14 @@ function ensureAdmin(req, res, next) {
     adminId: req.session?.adminId,
     adminUsername: req.session?.adminUsername,
     sessionId: req.sessionID,
-    url: req.url
+    url: req.url,
   });
-  
+
   if (req.session && req.session.adminId) {
     console.log("✅ Admin authenticated, proceeding...");
     return next();
   }
-  
+
   console.log("❌ Admin not authenticated, redirecting to login");
   res.redirect("/admin/login");
 }
