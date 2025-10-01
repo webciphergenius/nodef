@@ -249,8 +249,15 @@ exports.getCompletedShipments = async (req, res) => {
 //list available shipments for drivers
 exports.listAvailableShipments = async (req, res) => {
   try {
+    const driverId = req.user.id;
+
     const [rows] = await db.query(
-      "SELECT * FROM shipments WHERE payment_status = 'paid' AND driver_id IS NULL"
+      `SELECT s.* FROM shipments s
+       LEFT JOIN users u ON s.cancelled_by = u.id
+       WHERE s.payment_status = 'paid' 
+       AND s.driver_id IS NULL 
+       AND (s.status != 'cancelled' OR (s.status = 'cancelled' AND (u.role = 'driver' AND s.cancelled_by != ?)))`,
+      [driverId]
     );
 
     const formatted = rows.map((row) => ({
@@ -274,7 +281,9 @@ exports.acceptShipment = async (req, res) => {
     const driverId = decoded.id;
 
     const [shipments] = await db.query(
-      "SELECT * FROM shipments WHERE id = ? AND payment_status = 'paid'",
+      `SELECT s.*, u.role as cancelled_by_role FROM shipments s
+       LEFT JOIN users u ON s.cancelled_by = u.id
+       WHERE s.id = ? AND s.payment_status = 'paid'`,
       [shipmentId]
     );
 
@@ -282,6 +291,18 @@ exports.acceptShipment = async (req, res) => {
       return res.status(404).json({ msg: "Shipment not found or not paid" });
 
     const shipment = shipments[0];
+
+    if (shipment.status === "cancelled") {
+      if (shipment.cancelled_by_role === "shipper") {
+        return res
+          .status(400)
+          .json({ msg: "Cannot accept a shipment cancelled by the shipper" });
+      } else if (shipment.cancelled_by === driverId) {
+        return res
+          .status(400)
+          .json({ msg: "Cannot accept a shipment you previously cancelled" });
+      }
+    }
 
     if (shipment.driver_id)
       return res
@@ -954,14 +975,13 @@ exports.cancelShipmentByDriver = async (req, res) => {
       });
     }
 
-    // Update shipment status to cancelled and remove driver assignment
+    // Update shipment status to cancelled but keep driver_id to track who cancelled it
     await db.query(
       `UPDATE shipments 
        SET status = 'cancelled', 
            cancellation_reason = ?, 
            cancelled_by = ?, 
-           cancelled_at = NOW(),
-           driver_id = NULL 
+           cancelled_at = NOW()
        WHERE id = ?`,
       [reason || "Cancelled by driver", driverId, shipmentId]
     );

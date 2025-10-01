@@ -36,10 +36,12 @@ This will add:
 
 I've updated the Multer configuration to:
 
+- ✅ Handle both `shipment_images` and `shipment_images[]` field formats
 - ✅ Handle larger file sizes (20MB)
 - ✅ Allow more fields (100 fields)
 - ✅ Better error handling with specific error messages
 - ✅ Debug logging for unexpected fields
+- ✅ Support up to 10 files per field
 
 ### **Fix 3: Frontend Form Data**
 
@@ -76,9 +78,12 @@ formData.append(
 formData.append("dropoff_name", "Chargerszilla"); // NEW FIELD
 formData.append("package_instructions", "Box with LCDs");
 
-// File uploads (multiple files)
+// File uploads (multiple files) - Both formats work now:
 formData.append("shipment_images", file1);
 formData.append("shipment_images", file2);
+// OR
+formData.append("shipment_images[]", file1);
+formData.append("shipment_images[]", file2);
 // ... more files
 ```
 
@@ -87,6 +92,12 @@ formData.append("shipment_images", file2);
 - Don't send `shipment_images` as a single field with multiple files
 - Don't send unexpected field names
 - Don't send files with wrong field names
+
+**✅ Now Fixed:**
+
+- Both `shipment_images` and `shipment_images[]` formats are supported
+- Up to 10 files can be uploaded per field
+- Better error messages for debugging
 
 ## 🔍 **Debugging Steps**
 
