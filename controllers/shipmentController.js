@@ -428,7 +428,7 @@ exports.listAcceptedShipments = async (req, res) => {
 
 //track shipment
 exports.updateLocation = async (req, res) => {
-  const { latitude, longitude } = req.body;
+  const { latitude, longitude } = req.body || {};
   const driverId = req.user.id;
   const shipmentId = req.params.shipmentId;
 
@@ -465,7 +465,7 @@ exports.getLatestLocation = async (req, res) => {
 // Recipient enters mobile to confirm delivery (or trigger OTP)
 exports.confirmRecipientMobile = async (req, res) => {
   try {
-    const { mobile, qrData } = req.body;
+    const { mobile, qrData } = req.body || {};
     if (!mobile) return res.status(400).json({ msg: "Mobile is required" });
     if (!qrData) return res.status(400).json({ msg: "QR data is required" });
 
@@ -539,7 +539,7 @@ exports.confirmRecipientMobile = async (req, res) => {
 // Recipient submits OTP to confirm delivery
 exports.confirmRecipientOtp = async (req, res) => {
   try {
-    const { otp, qrData } = req.body;
+    const { otp, qrData } = req.body || {};
     if (!otp) return res.status(400).json({ msg: "OTP is required" });
     if (!qrData) return res.status(400).json({ msg: "QR data is required" });
 
@@ -779,7 +779,7 @@ exports.markDelivered = async (req, res) => {
 exports.confirmDriverOtp = async (req, res) => {
   try {
     const { shipmentId } = req.params;
-    const { otp } = req.body;
+    const { otp } = req.body || {};
     const driverId = req.user.id;
 
     if (!otp) return res.status(400).json({ msg: "OTP is required" });
@@ -823,7 +823,7 @@ exports.confirmDriverOtp = async (req, res) => {
 // Recipient confirms via web page (QR code opens this)
 exports.confirmRecipientWeb = async (req, res) => {
   try {
-    const { shipment_id, token, otp } = req.body;
+    const { shipment_id, token, otp } = req.body || {};
 
     if (!shipment_id || !token) {
       return res.status(400).json({ msg: "Invalid confirmation link" });
@@ -874,7 +874,7 @@ exports.cancelShipmentByShipper = async (req, res) => {
   try {
     const shipmentId = req.params.shipmentId;
     const shipperId = req.user.id;
-    const { reason } = req.body;
+    const reason = req.body?.reason;
 
     // Check if shipment exists and belongs to the shipper
     const [rows] = await db.query(
@@ -946,7 +946,7 @@ exports.cancelShipmentByDriver = async (req, res) => {
   try {
     const shipmentId = req.params.shipmentId;
     const driverId = req.user.id;
-    const { reason } = req.body;
+    const reason = req.body?.reason;
 
     // Check if shipment exists and is assigned to the driver
     const [rows] = await db.query(
